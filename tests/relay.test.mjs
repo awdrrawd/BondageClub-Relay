@@ -158,3 +158,24 @@ test('one classified status drives error text and toast; repositioning preserves
   h.events.get('resize')();assert.equal(toast.className,'toast above');assert.ok(h.timeouts.has(deadline));
   handlers.get('connect')();assert.equal(error.hidden,true);assert.equal(error.textContent,'');
 });
+
+test('Asia version-root entry loads the bubble and intercepts the socket',()=>{
+  for (const suffix of ['', 'index.html']) {
+    const h=harness();
+    h.ctx.location=new URL('https://www.bondage-asia.com/club/R131/'+suffix);
+    vm.runInContext(code,h.ctx);
+    assert.equal(h.document.head.children[0].src,'https://my-relay.pages.dev/runtime.js');
+    vm.runInContext(runtime,h.ctx);
+    assert.ok(h.document.body.children.some(node=>node.id==='bc-relay-panel'));
+    let target;
+    h.window.io=(url)=>{target=url;return {on(){}}};
+    h.window.io('https://bondage-club-server.herokuapp.com');
+    assert.equal(target,'https://my-relay.pages.dev');
+  }
+  for (const url of ['https://www.bondage-asia.com/club/', 'https://www.bondage-asia.com/club/R131/Assets/test.html', 'https://example.com/club/R131/']) {
+    const h=harness();h.ctx.location=new URL(url);
+    vm.runInContext(code,h.ctx);
+    assert.equal(h.window.__BCRelayLoader,undefined);
+    assert.equal(h.document.head.children.length,0);
+  }
+});

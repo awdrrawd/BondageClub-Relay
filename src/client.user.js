@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         BC Relay Connection Test
 // @namespace    https://github.com/awdrrawd/BondageClub-Relay
-// @version      0.2.0
+// @version      0.2.1
 // @updateURL    __INSTALL_URL__
 // @downloadURL  __INSTALL_URL__
 // @description  Compare native, direct WebSocket, and Cloudflare relay on official BC pages.
@@ -14,7 +14,11 @@
 // ==/UserScript==
 (() => {
   'use strict';
-  if (!/\/R[^/]*\/BondageClub\//i.test(location.pathname)) return;
+  // Asia serves the game directly at /club/R131/, without /BondageClub/.
+  const standardGame = /\/R[^/]*\/BondageClub\//i.test(location.pathname);
+  const asiaGame = /^(www\.)?bondage-asia\.com$/i.test(location.hostname)
+    && /^\/club\/R[^/]+\/(?:index\.html?)?$/i.test(location.pathname);
+  if (!standardGame && !asiaGame) return;
   const relay = "__RELAY_ORIGIN__";
   // Repository copies are templates. Reject them before touching the game's io.
   if (!relay.startsWith('https://')) {
