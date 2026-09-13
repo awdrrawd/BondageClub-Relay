@@ -10,3 +10,6 @@ await writeFile(path.join(out,'_routes.json'),JSON.stringify({version:1,include:
 await writeFile(path.join(out,'_headers'),'/*\n  Cache-Control: no-store\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n');
 console.log('Built dist-relay: official-page test only; no upstream download or CDN required.');
 await cp(path.join(root,'src/monitor'),path.join(out,'monitor'),{recursive:true});
+
+await copyFile(path.join(root,'docs/monitor.md'),path.join(out,'monitor/monitor.md'));
+await writeFile(path.join(out,'_redirects'),'/monitor /monitor/ 301\n');
