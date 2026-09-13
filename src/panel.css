@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 .panel { width: min(340px, calc(100vw - 16px)); touch-action: none; padding: 14px; border: 1px solid #8f75bb; border-radius: 14px; background: #211b2df5; color: #eee8f5; box-shadow: 0 8px 28px #0006; font: 13px/1.5 system-ui, sans-serif; animation: enter .16s ease-out; }
 header, .controls { display: flex; align-items: center; gap: 8px; }
-header { justify-content: space-between; margin-bottom: 10px; }
+header { justify-content: space-between; margin-bottom: 10px; cursor: grab; user-select: none; }
 strong { font-size: 12px; letter-spacing: .02em; color: #c6aff0; }
 select, button { min-height: 38px; border: 1px solid #66547f; border-radius: 8px; font: inherit; color: inherit; }
 select { flex: 1; min-width: 0; padding: 6px 8px; background: #15111e; }
@@ -12,7 +12,6 @@ button:active:not(:disabled) { transform: scale(.96); }
 button:disabled { opacity: .45; cursor: default; }
 :focus-visible { outline: 2px solid #d6b9ff; outline-offset: 2px; }
 @keyframes enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .panel { animation: none; } button { transition: none; } }
 .info { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border: 1px solid #66547f; border-radius: 50%; color: #d6b9ff; font: 700 14px Georgia,serif; text-decoration: none; }
 .info:hover { background: #49365f; border-color: #c6aff0; }
 [hidden] { display: none !important; }
@@ -24,13 +23,14 @@ button:disabled { opacity: .45; cursor: default; }
 .sprite { display: block; width: 44px; height: 44px; background-image: url('./icon.webp'); background-size: 132px 44px; background-repeat: no-repeat; pointer-events: none; }
 .sprite.native { background-position: 0 0; } .sprite.websocket { background-position: -44px 0; } .sprite.relay { background-position: -88px 0; }
 .badge { position: absolute; top: -5px; right: -3px; border-radius: 50%; width: 20px; height: 20px; background: #ffd05d; color: #30230b; font: 800 14px/20px system-ui; pointer-events: none; }
-header { cursor: grab; user-select: none; }
 .error { color: #ffda80; font-size: 12px; margin: 12px 0 6px; overflow-wrap: anywhere; }
 .update-link { color: #d6b9ff; font-size: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .bubble[data-state="connecting"]::after { animation: none; } }
 .toast { position: absolute; right: calc(100% + 12px); bottom: 6px; width: max-content; padding: 10px 14px; border: 1px solid #bca1e5; border-radius: 10px; background: #211b2df5; color: #eee8f5; box-shadow: 0 4px 20px #0005; font: 13px/1.5 system-ui,sans-serif; overflow-wrap: anywhere; pointer-events: none; animation: toast-in .18s ease-out; }
 .toast[data-state^="failed"] { border-color: #f4c451; color: #ffda80; }
 .toast.above { right: 0; bottom: calc(100% + 12px); }
 @keyframes toast-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .panel, .toast, .bubble[data-state="connecting"]::after { animation: none; }
+  button { transition: none; }
+}

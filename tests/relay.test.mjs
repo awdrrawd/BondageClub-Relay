@@ -10,7 +10,7 @@ function harness(mode='relay') {
   const timeouts = new Map(), intervals = new Map(), events = new Map(), nodes = [], warnings = [];
   let next=0;
   function element(tag) {
-    const node={tag, tagName:tag.toUpperCase(),style:{},handlers:new Map(),attrs:{}, getBoundingClientRect:()=>({width:340,height:180}), focus(){}, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(key,value){this.attrs[key]=value}, addEventListener(key,fn){this.handlers.set(key,fn)},removeEventListener(key){this.handlers.delete(key)}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
+    const node={tag, tagName:tag.toUpperCase(),style:{},handlers:new Map(),attrs:{}, getBoundingClientRect:()=>({width:340,height:180,left:448,right:788}), focus(){}, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(key,value){this.attrs[key]=value}, addEventListener(key,fn){this.handlers.set(key,fn)},removeEventListener(key){this.handlers.delete(key)}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
     nodes.push(node);return node;
   }
   const document={readyState:'complete',head:element('head'),documentElement:element('html'),body:element('body'),createElement:element,addEventListener:(key,fn)=>events.set('doc:'+key,fn),removeEventListener:key=>events.delete('doc:'+key)};
@@ -141,4 +141,20 @@ test('localized toast expires after 3 seconds, does not restart on polling, and 
     handlers.get('connect_error')();assert.equal(toast.hidden,false);
     h.window.__BCRelayLoader.finishLogin();assert.equal(h.timeouts.size,0);
   }
+});
+
+test('one classified status drives error text and toast; repositioning preserves its deadline',()=>{
+  const h=harness();h.window.navigator={language:'en'};vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+  const host=h.document.body.children[0], toast=h.nodes.find(n=>n.className==='toast');
+  const error=h.nodes.find(n=>n.className==='error');
+  h.window.ServerSocket={};h.intervals.values().next().value();
+  assert.match(error.textContent,/not intercepted/);assert.match(toast.textContent,/not intercepted/);
+  const handlers=new Map();h.window.io=()=>({on:(event,fn)=>handlers.set(event,fn)});
+  h.window.io('https://bondage-club-server.herokuapp.com');handlers.get('disconnect')();
+  assert.match(error.textContent,/disconnected/i);assert.match(toast.textContent,/Disconnected/);
+  handlers.get('connect_error')();assert.match(error.textContent,/cause is not available/);
+  const deadline=[...h.timeouts.keys()][0];
+  host.getBoundingClientRect=()=>({width:60,height:60,left:20,right:80});
+  h.events.get('resize')();assert.equal(toast.className,'toast above');assert.ok(h.timeouts.has(deadline));
+  handlers.get('connect')();assert.equal(error.hidden,true);assert.equal(error.textContent,'');
 });

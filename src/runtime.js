@@ -8,46 +8,68 @@
     panel: 'BC Relay 連線設定', mode: '連線模式', apply: '套用', info: '使用說明（新分頁）',
     native: 'A · 原版直連', websocket: 'B · WebSocket 直連', relay: 'C · Cloudflare 中繼',
     connecting: '連線中', connected: '連線成功', failed: '連線失敗',
+    noticeConnected: '連線成功，可正常登入遊戲',
+    noticeConnecting: '連線中，請稍候…',
+    noticeMissed: '未能攔截連線，請展開查看更新指引',
+    noticeDisconnected: '連線中斷，請稍候或展開查看說明',
+    noticeFailed: '連線失敗，請展開查看排錯說明',
+    detailMissed: '未能攔截官方連線。請更新 Loader、重新載入，並檢查其他連線插件是否衝突。',
+    detailDisconnected: 'Socket 已斷線，等待重新連線。若持續發生，請查看 Console／Network 或改用 A 比較。',
+    detailFailed: '連線建立失敗；目前無法判定原因。請查看 Console／Network 的握手錯誤，或點 i 閱讀排錯說明。',
+    update: '檢查／更新 Loader ↗',
     confirm: '切換會重新載入並斷開目前遊戲，確定套用？',
   } : {
     panel: 'BC Relay connection settings', mode: 'Connection mode', apply: 'Apply', info: 'Help (opens a new tab)',
     native: 'A · Native', websocket: 'B · Direct WebSocket', relay: 'C · Cloudflare relay',
     connecting: 'Connecting', connected: 'Connected', failed: 'Connection failed',
+    noticeConnected: 'Connected. You can now log in to the game.',
+    noticeConnecting: 'Connecting, please wait…',
+    noticeMissed: 'Connection not intercepted. Open for update guidance.',
+    noticeDisconnected: 'Disconnected. Please wait or open for help.',
+    noticeFailed: 'Connection failed. Open for troubleshooting.',
+    detailMissed: 'The official connection was not intercepted. Update the loader, reload, and check for conflicting mods.',
+    detailDisconnected: 'Socket disconnected. Waiting for reconnection. Check Console / Network or compare mode A if it persists.',
+    detailFailed: 'Connection failed; the cause is not available here. Check the handshake error in Console / Network, or open i for troubleshooting.',
+    update: 'Check / update loader ↗',
     confirm: 'Switching will reload the page and disconnect the game. Apply?',
   };
   // Loader v1 exposes diagnostic text. Keep compatibility without reinstalling it.
   function connectionState(state) {
-    if ((!state.intercepted && window.ServerSocket) || /失敗|已斷線|未能攔截/.test(state.status)) return 'failed';
-    return /已連線|登入成功/.test(state.status) ? 'connected' : 'connecting';
+    if ((!state.intercepted && window.ServerSocket) || /未能攔截/.test(state.status)) return 'Missed';
+    if (/已斷線/.test(state.status)) return 'Disconnected';
+    if (/失敗/.test(state.status)) return 'Failed';
+    return /已連線|登入成功/.test(state.status) ? 'Connected' : 'Connecting';
   }
   let host, timer, unsubscribe, toastTimer;
   let refresh = () => {};
   const cleanups = [];
+  const listen = (target, event, fn, options) => {
+    target.addEventListener(event, fn, options);
+    cleanups.push(() => target.removeEventListener(event, fn, options));
+  };
   let disposed = false;
   const dispose = () => {
+    if (disposed) return;
     disposed = true;
-    window.clearInterval(timer);
+    pause();
     window.clearTimeout(toastTimer);
-    timer = undefined;
     unsubscribe?.();
     for (const cleanup of cleanups.splice(0)) cleanup();
     host?.remove();
     host = undefined;
-    document.removeEventListener('DOMContentLoaded', mount);
-    window.removeEventListener('pagehide', pause);
-    window.removeEventListener('pageshow', resume);
   };
-  const checkLogin = () => {
-    if (core.snapshot().loggedIn || window.Player?.MemberNumber != null) {
+  const checkLogin = (state = core.snapshot()) => {
+    if (disposed) return true;
+    if (state.loggedIn || window.Player?.MemberNumber != null) {
       dispose();
-      core.finishLogin();
+      if (!state.loggedIn) core.finishLogin();
       return true;
     }
     return false;
   };
   function pause() { window.clearInterval(timer); timer = undefined; }
   function resume() {
-    if (!disposed && !checkLogin() && timer === undefined) timer = window.setInterval(() => { if (!checkLogin()) refresh(); }, 500);
+    if (!disposed && !checkLogin() && timer === undefined) timer = window.setInterval(() => refresh(), 500);
   }
   function mount() {
     if (disposed || checkLogin()) return;
@@ -75,18 +97,14 @@
     }
     select.value = core.mode;
     const apply = document.createElement('button'); apply.textContent = t.apply; apply.disabled = true;
-    select.addEventListener('change', () => { apply.disabled = select.value === core.mode; });
-    apply.addEventListener('click', () => {
+    listen(select, 'change', () => { apply.disabled = select.value === core.mode; });
+    listen(apply, 'click', () => {
       if (window.confirm(t.confirm)) core.applyMode(select.value);
     });
     const error = document.createElement('p'); error.className = 'error';
     const updateLink = document.createElement('a'); updateLink.className = 'update-link';
     updateLink.href = `${core.relay}/install.user.js`; updateLink.target = '_blank'; updateLink.rel = 'noopener noreferrer';
-    updateLink.textContent = chinese ? '檢查／更新 Loader ↗' : 'Check / update loader ↗';
-    const listen = (target, event, fn, options) => {
-      target.addEventListener(event, fn, options);
-      cleanups.push(() => target.removeEventListener(event, fn, options));
-    };
+    updateLink.textContent = t.update;
     let expanded = false, drag = null, suppressClick = false;
     let right = 12, bottom = 12;
     const clamp = () => {
@@ -94,6 +112,7 @@
       right = Math.max(8, Math.min(right, Math.max(8, window.innerWidth - rect.width - 8)));
       bottom = Math.max(8, Math.min(bottom, Math.max(8, window.innerHeight - rect.height - 8)));
       host.style.right = `${right}px`; host.style.bottom = `${bottom}px`;
+      positionToast();
     };
     const expand = value => {
       expanded = value; panel.hidden = !value; bubble.hidden = value;
@@ -122,44 +141,36 @@
     listen(window, 'pointerup', endDrag); listen(window, 'pointercancel', endDrag);
     const toast = document.createElement('div'); toast.className = 'toast'; toast.hidden = true;
     toast.lang = chinese ? 'zh-Hant' : 'en'; toast.setAttribute('role', 'status');
-    let lastNotice;
-    const showNotice = (key, message) => {
-      if (lastNotice === key) return;
-      lastNotice = key;
-      window.clearTimeout(toastTimer);
-      toast.textContent = message; toast.hidden = false;
-      toast.setAttribute('data-state', key);
+    const positionToast = () => {
+      if (toast.hidden) return;
       // Prefer the bubble's left side; keep the notice visible near viewport edges.
       const rect = host.getBoundingClientRect();
       toast.style.maxWidth = `${Math.max(120, Math.min(280, window.innerWidth - 24))}px`;
       const leftFits = rect.left >= Math.min(292, window.innerWidth - 24);
       toast.className = leftFits ? 'toast' : 'toast above';
       toast.style.right = leftFits ? '' : `${Math.min(0, rect.right - Math.min(280, window.innerWidth - 24) - 12)}px`;
+    };
+    const showNotice = (key, message) => {
+      window.clearTimeout(toastTimer);
+      toast.textContent = message; toast.hidden = false;
+      toast.setAttribute('data-state', key);
+      positionToast();
       toastTimer = window.setTimeout(() => { toast.hidden = true; toastTimer = undefined; }, 3000);
     };
+    let renderedKind;
     const sync = () => {
-      if (checkLogin()) return;
       const state = core.snapshot();
-      const connection = connectionState(state);
-      const notice = connection === 'connected'
-        ? (chinese ? '連線成功，可正常登入遊戲' : 'Connected. You can now log in to the game.')
-        : connection === 'connecting'
-          ? (chinese ? '連線中，請稍候…' : 'Connecting, please wait…')
-          : !state.intercepted || /未能攔截/.test(state.status)
-            ? (chinese ? '未能攔截連線，請展開查看更新指引' : 'Connection not intercepted. Open for update guidance.')
-            : /已斷線/.test(state.status)
-              ? (chinese ? '連線中斷，請稍候或展開查看說明' : 'Disconnected. Please wait or open for help.')
-              : (chinese ? '連線失敗，請展開查看排錯說明' : 'Connection failed. Open for troubleshooting.');
-      showNotice(connection + (connection === 'failed' ? state.status : ''), notice);
+      if (checkLogin(state)) return;
+      const kind = connectionState(state);
+      if (renderedKind === kind) return;
+      renderedKind = kind;
+      const connection = kind === 'Connected' ? 'connected' : kind === 'Connecting' ? 'connecting' : 'failed';
+      showNotice(connection, t[`notice${kind}`]);
       heading.textContent = `BC RELAY - ${t[connection]}`;
       bubble.setAttribute('aria-label', `${heading.textContent} · ${t.panel}`);
       bubble.title = heading.textContent; bubble.setAttribute('data-state', connection);
       badge.hidden = connection !== 'failed'; error.hidden = updateLink.hidden = connection !== 'failed';
-      error.textContent = !state.intercepted || /未能攔截/.test(state.status)
-        ? (chinese ? '未能攔截官方連線。請更新 Loader、重新載入，並檢查其他連線插件是否衝突。' : 'The official connection was not intercepted. Update the loader, reload, and check for conflicting mods.')
-        : /已斷線/.test(state.status)
-          ? (chinese ? 'Socket 已斷線，等待重新連線。若持續發生，請查看 Console／Network 或改用 A 比較。' : 'Socket disconnected. Waiting for reconnection. Check Console / Network or compare mode A if it persists.')
-          : (chinese ? '連線建立失敗；目前無法判定原因。請查看 Console／Network 的握手錯誤，或點 i 閱讀排錯說明。' : 'Connection failed; the cause is not available here. Check the handshake error in Console / Network, or open i for troubleshooting.');
+      error.textContent = t[`detail${kind}`] || '';
     };
     row.append(select, apply); panel.append(header, row, error, updateLink); shadow.append(css, bubble, panel, toast); document.body.append(host);
     expand(false);
@@ -167,11 +178,11 @@
     unsubscribe = core.subscribe(sync);
     sync();
     if (!disposed) {
-      window.addEventListener('pagehide', pause);
-      window.addEventListener('pageshow', resume);
+      listen(window, 'pagehide', pause);
+      listen(window, 'pageshow', resume);
       resume();
     }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once:true});
+  if (document.readyState === 'loading') listen(document, 'DOMContentLoaded', mount, {once:true});
   else mount();
 })();
