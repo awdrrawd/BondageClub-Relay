@@ -43,7 +43,10 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
     if (!/^[a-f0-9]{32}$/i.test(account || '') || !token || !script || script.length > 256) return response({state:'not_configured',project:label});
     const dataset=env.MONITOR_DATASET || 'pagesFunctionsInvocationsAdaptiveGroups';
     if (!['pagesFunctionsInvocationsAdaptiveGroups','workersInvocationsAdaptive'].includes(dataset)) return response({state:'not_configured',project:label});
-    const key = JSON.stringify([account,token,script,dataset]);
+    // Pages uses GraphQL String; Workers analytics uses the custom string scalar.
+    const query = QUERY.replaceAll('workersInvocationsAdaptive',dataset)
+      .replaceAll(': string', dataset === 'pagesFunctionsInvocationsAdaptiveGroups' ? ': String' : ': string');
+    const key = JSON.stringify([account,token,script,dataset,query]);
     if (key !== configKey) { memo=undefined; pending=undefined; configKey=key; }
     const now=clock();
     if (memo && memo.expires > now) return response(memo.data);
@@ -66,7 +69,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
         const end=new Date(now).toISOString();
         const res=await fetcher('https://api.cloudflare.com/client/v4/graphql',{
           method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-          body:JSON.stringify({query:QUERY.replaceAll('workersInvocationsAdaptive',dataset),variables:{account,script,start:new Date(now-86400000).toISOString(),today:end.slice(0,10)+'T00:00:00.000Z',end}}),
+          body:JSON.stringify({query,variables:{account,script,start:new Date(now-86400000).toISOString(),today:end.slice(0,10)+'T00:00:00.000Z',end}}),
           signal:AbortSignal.timeout(10000),redirect:'error',
         });
         if (!res.ok) throw new Error('upstream');
