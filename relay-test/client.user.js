@@ -1,16 +1,9 @@
 // ==UserScript==
 // @name         BC Relay Connection Test
 // @namespace    https://github.com/awdrrawd/BondageClub-Relay
-// @version      0.1.0
+// @version      0.1.1
 // @description  Compare native, direct WebSocket, and Cloudflare relay on official BC pages.
-// @match        https://bondageprojects.elementfx.com/*
-// @match        https://*.bondageprojects.elementfx.com/*
-// @match        https://bondage-europe.com/*
-// @match        https://*.bondage-europe.com/*
-// @match        https://bondageprojects.com/*
-// @match        https://*.bondageprojects.com/*
-// @match        https://bondage-asia.com/*
-// @match        https://*.bondage-asia.com/*
+// @include      /^https:\/\/(www\.)?(bondage(projects\.elementfx|-(europe|asia))\.com|bondageeurope\.com)\/(club\/)?R[^/]*\/.*$/
 // @run-at       document-start
 // @grant        none
 // @sandbox      raw
@@ -70,7 +63,7 @@
   } catch { update('未能攔截 io；此輪不能視為中繼測試，請停用其他連線插件後重載。'); }
   function panel() {
     const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;right:8px;top:8px;z-index:2147483647;background:#211b2d;color:#eee;border:1px solid #b69ae3;padding:8px;border-radius:8px;font:12px system-ui;max-width:300px';
+    box.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#211b2d;color:#eee;border:1px solid #b69ae3;padding:8px;border-radius:8px;font:12px system-ui;max-width:300px';
     const select = document.createElement('select'); select.title = '切換後重新載入頁面，會斷開目前遊戲';
     for (const [value,text] of [['native','A 原版直連'],['websocket','B WebSocket 直連'],['relay','C Cloudflare 中繼']]) { const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option); }
     select.value=mode;
@@ -78,6 +71,14 @@
     apply.onclick=()=>{ if (confirm('切換會重新載入並斷開目前遊戲，確定套用？')) { try {localStorage.setItem(key,select.value);location.reload();} catch {update('無法儲存模式，請檢查瀏覽器儲存權限');} } };
     statusNode=document.createElement('div');statusNode.textContent=status;
     box.append(select,apply,statusNode);document.body.append(box);
+    // No SDK hook: keep one inexpensive poll so logout can reveal the controls again.
+    const syncVisibility = () => { box.hidden = window.Player?.MemberNumber != null; };
+    syncVisibility();
+    let visibilityTimer = window.setInterval(syncVisibility, 500);
+    window.addEventListener('pagehide', () => { window.clearInterval(visibilityTimer); visibilityTimer = null; });
+    window.addEventListener('pageshow', () => {
+      if (visibilityTimer === null) { syncVisibility(); visibilityTimer = window.setInterval(syncVisibility, 500); }
+    });
     if (!intercepted) update('尚未觀察到官方 io 呼叫；若已登入，代表插件注入太晚，本輪無效。');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',panel,{once:true});else panel();

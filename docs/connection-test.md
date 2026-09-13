@@ -29,7 +29,9 @@ Workers & Pages → 建立 Pages → 連接 GitHub → BondageClub-Relay。
 2. 在你自己的 Relay 首頁點「安裝 BC Relay Connection Test」，於 Tampermonkey 確認安裝。
 3. 不要直接安裝倉庫的 client.user.js，它還沒有填入你的 Relay 網址。使用本站 `/install.user.js` 產生的版本。
 4. 重開原本能使用的官方遊戲網址。四組域名及其子域名都包含在匹配範圍；不替你猜最新版本網址。
-5. 右上角應看到 A/B/C 下拉選單及狀態。預設 A；若看不到，先檢查 Tampermonkey 是否允許本站、是否在頁面環境 document-start 執行。
+5. 右下角應看到 A/B/C 下拉選單及狀態。預設 A；若看不到，先檢查 Tampermonkey 是否允許本站、是否在頁面環境 document-start 執行。
+
+插件 0.1.1 使用 @include 正規式（指定域名及可選 www，保留亞洲站 /club/），每 500ms 檢查 Player.MemberNumber，登入後隱藏面板，登出且會員編號清除後重新顯示。隱藏後連線與錯誤狀態仍在 Console 的 [BC Relay Test] 訊息中。頁面離開會清除輪詢，不使用 SDK。
 
 ## 4. 測試顺序
 

@@ -4,8 +4,24 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 import worker,{officialOrigin} from '../relay-test/worker.js';
 test('official origin allowlist rejects lookalikes and insecure origins',()=>{
- for(const origin of ['https://bondage-europe.com','https://www.bondageprojects.com']) assert.equal(officialOrigin(origin),true);
+ for(const origin of ['https://bondage-europe.com','https://www.bondageprojects.com','https://bondageeurope.com']) assert.equal(officialOrigin(origin),true);
  for(const origin of [null,'http://bondage-europe.com','https://bondage-europe.com.evil.example','https://evilbondage-europe.com','https://bondage-europe.com/path']) assert.equal(officialOrigin(origin),false);
+});
+
+test('userscript include and login polling support official pages and release timers',async()=>{
+ const code=await readFile(new URL('../relay-test/client.user.js',import.meta.url),'utf8');
+ const pattern=/^\/\/ @include\s+\/(.*)\/$/m.exec(code)[1];const include=new RegExp(pattern);
+ for(const url of ['https://www.bondageprojects.elementfx.com/R131/BondageClub/','https://bondageeurope.com/R131/BondageClub/','https://bondage-asia.com/club/R132Beta1/BondageClub/'])assert.equal(include.test(url),true,url);
+ for(const url of ['http://bondage-europe.com/R131/','https://bondage-europe.com.evil.example/R131/'])assert.equal(include.test(url),false,url);
+ const timers=new Map(),events=new Map();let next=0,box;
+ const window={setInterval:fn=>{timers.set(++next,fn);return next},clearInterval:id=>timers.delete(id),addEventListener:(name,fn)=>events.set(name,fn)};
+ const document={readyState:'complete',createElement:()=>({style:{},append(){}}),body:{append:element=>{box=element}}};
+ vm.runInNewContext(code,{window,document,location:{pathname:'/R131/BondageClub/'},URL,localStorage:{getItem:()=>null},console:{info(){}},confirm:()=>false});
+ assert.equal(box.hidden,false);assert.match(box.style.cssText,/bottom:8px/);assert.equal(timers.size,1);
+ window.Player={MemberNumber:55};timers.values().next().value();assert.equal(box.hidden,true);
+ window.Player={};timers.values().next().value();assert.equal(box.hidden,false);
+ events.get('pagehide')();assert.equal(timers.size,0);
+ events.get('pageshow')();events.get('pageshow')();assert.equal(timers.size,1);
 });
 test('installer embeds its own origin and relay rejects arbitrary upstreams',async()=>{
  const env={ASSETS:{fetch:async()=>new Response('const relay = "__RELAY_ORIGIN__";')}};

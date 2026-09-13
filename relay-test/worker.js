@@ -1,4 +1,4 @@
-const hosts = ['bondageprojects.elementfx.com', 'bondage-europe.com', 'bondageprojects.com', 'bondage-asia.com'];
+const hosts = ['bondageprojects.elementfx.com', 'bondage-europe.com', 'bondageprojects.com', 'bondage-asia.com', 'bondageeurope.com'];
 export function officialOrigin(value) {
   try { const u = new URL(value); return u.protocol === 'https:' && u.origin === value && hosts.some(h => u.hostname === h || u.hostname.endsWith('.' + h)); } catch { return false; }
 }
