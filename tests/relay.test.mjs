@@ -7,16 +7,16 @@ const template = await readFile(new URL('../src/client.user.js', import.meta.url
 const runtime = await readFile(new URL('../src/runtime.js', import.meta.url), 'utf8');
 const code = template.replace('"__RELAY_ORIGIN__"', '"https://my-relay.pages.dev"');
 function harness(mode='relay') {
-  const intervals = new Map(), events = new Map(), nodes = [], warnings = [];
+  const timeouts = new Map(), intervals = new Map(), events = new Map(), nodes = [], warnings = [];
   let next=0;
   function element(tag) {
     const node={tag, tagName:tag.toUpperCase(),style:{},handlers:new Map(),attrs:{}, getBoundingClientRect:()=>({width:340,height:180}), focus(){}, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(key,value){this.attrs[key]=value}, addEventListener(key,fn){this.handlers.set(key,fn)},removeEventListener(key){this.handlers.delete(key)}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
     nodes.push(node);return node;
   }
   const document={readyState:'complete',head:element('head'),documentElement:element('html'),body:element('body'),createElement:element,addEventListener:(key,fn)=>events.set('doc:'+key,fn),removeEventListener:key=>events.delete('doc:'+key)};
-  const window={innerWidth:800,innerHeight:600,setInterval:fn=>{intervals.set(++next,fn);return next},clearInterval:id=>intervals.delete(id),addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:key=>events.delete(key),alert:text=>warnings.push(text)};
+  const window={setTimeout:(fn,ms)=>{timeouts.set(++next,{fn,ms});return next},clearTimeout:id=>timeouts.delete(id),innerWidth:800,innerHeight:600,setInterval:fn=>{intervals.set(++next,fn);return next},clearInterval:id=>intervals.delete(id),addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:key=>events.delete(key),alert:text=>warnings.push(text)};
   const ctx=vm.createContext({window,document,location:{pathname:'/R131/BondageClub/',href:'https://bondage-europe.com/R131/BondageClub/'},URL,localStorage:{getItem:()=>mode},console:{info(){},error:text=>warnings.push(text)}});
-  return {window,document,ctx,nodes,intervals,events,warnings};
+  return {window,document,ctx,nodes,intervals,events,warnings,timeouts};
 }
 test('official URL scopes reject lookalikes',()=>{
   const include=new RegExp(/^\/\/ @include\s+\/(.*)\/$/m.exec(template)[1]);
@@ -125,4 +125,20 @@ test('bubble expands, closes outside, drags without opening, clamps and cleans u
   assert.equal(panel.hidden,false);
   h.window.innerWidth=360;h.events.get('resize')();assert.equal(host.style.right,'12px');
   h.window.__BCRelayLoader.finishLogin();assert.equal(h.events.size,0);assert.equal(h.intervals.size,0);
+});
+
+test('localized toast expires after 3 seconds, does not restart on polling, and clears on login',()=>{
+  for (const language of ['zh-TW','en']) {
+    const h=harness();h.window.navigator={language};vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+    const toast=h.nodes.find(n=>n.className?.startsWith('toast'));
+    const handlers=new Map();h.window.io=()=>({on:(event,fn)=>handlers.set(event,fn)});
+    h.window.io('https://bondage-club-server.herokuapp.com');handlers.get('connect')();
+    assert.equal(toast.textContent,language==='en'?'Connected. You can now log in to the game.':'連線成功，可正常登入遊戲');
+    const [id,timeout]=[...h.timeouts][0];assert.equal(timeout.ms,3000);
+    h.intervals.values().next().value();assert.ok(h.timeouts.has(id));
+    h.timeouts.delete(id);timeout.fn();assert.equal(toast.hidden,true);
+    h.intervals.values().next().value();assert.equal(toast.hidden,true);
+    handlers.get('connect_error')();assert.equal(toast.hidden,false);
+    h.window.__BCRelayLoader.finishLogin();assert.equal(h.timeouts.size,0);
+  }
 });

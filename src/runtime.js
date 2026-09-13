@@ -20,13 +20,14 @@
     if ((!state.intercepted && window.ServerSocket) || /失敗|已斷線|未能攔截/.test(state.status)) return 'failed';
     return /已連線|登入成功/.test(state.status) ? 'connected' : 'connecting';
   }
-  let host, timer, unsubscribe;
+  let host, timer, unsubscribe, toastTimer;
   let refresh = () => {};
   const cleanups = [];
   let disposed = false;
   const dispose = () => {
     disposed = true;
     window.clearInterval(timer);
+    window.clearTimeout(toastTimer);
     timer = undefined;
     unsubscribe?.();
     for (const cleanup of cleanups.splice(0)) cleanup();
@@ -119,10 +120,37 @@
     }, {passive:false});
     const endDrag = event => { if (drag && event.pointerId === drag.id) { suppressClick = drag.moved; drag = null; } };
     listen(window, 'pointerup', endDrag); listen(window, 'pointercancel', endDrag);
+    const toast = document.createElement('div'); toast.className = 'toast'; toast.hidden = true;
+    toast.lang = chinese ? 'zh-Hant' : 'en'; toast.setAttribute('role', 'status');
+    let lastNotice;
+    const showNotice = (key, message) => {
+      if (lastNotice === key) return;
+      lastNotice = key;
+      window.clearTimeout(toastTimer);
+      toast.textContent = message; toast.hidden = false;
+      toast.setAttribute('data-state', key);
+      // Prefer the bubble's left side; keep the notice visible near viewport edges.
+      const rect = host.getBoundingClientRect();
+      toast.style.maxWidth = `${Math.max(120, Math.min(280, window.innerWidth - 24))}px`;
+      const leftFits = rect.left >= Math.min(292, window.innerWidth - 24);
+      toast.className = leftFits ? 'toast' : 'toast above';
+      toast.style.right = leftFits ? '' : `${Math.min(0, rect.right - Math.min(280, window.innerWidth - 24) - 12)}px`;
+      toastTimer = window.setTimeout(() => { toast.hidden = true; toastTimer = undefined; }, 3000);
+    };
     const sync = () => {
       if (checkLogin()) return;
       const state = core.snapshot();
       const connection = connectionState(state);
+      const notice = connection === 'connected'
+        ? (chinese ? '連線成功，可正常登入遊戲' : 'Connected. You can now log in to the game.')
+        : connection === 'connecting'
+          ? (chinese ? '連線中，請稍候…' : 'Connecting, please wait…')
+          : !state.intercepted || /未能攔截/.test(state.status)
+            ? (chinese ? '未能攔截連線，請展開查看更新指引' : 'Connection not intercepted. Open for update guidance.')
+            : /已斷線/.test(state.status)
+              ? (chinese ? '連線中斷，請稍候或展開查看說明' : 'Disconnected. Please wait or open for help.')
+              : (chinese ? '連線失敗，請展開查看排錯說明' : 'Connection failed. Open for troubleshooting.');
+      showNotice(connection + (connection === 'failed' ? state.status : ''), notice);
       heading.textContent = `BC RELAY - ${t[connection]}`;
       bubble.setAttribute('aria-label', `${heading.textContent} · ${t.panel}`);
       bubble.title = heading.textContent; bubble.setAttribute('data-state', connection);
@@ -133,7 +161,7 @@
           ? (chinese ? 'Socket 已斷線，等待重新連線。若持續發生，請查看 Console／Network 或改用 A 比較。' : 'Socket disconnected. Waiting for reconnection. Check Console / Network or compare mode A if it persists.')
           : (chinese ? '連線建立失敗；目前無法判定原因。請查看 Console／Network 的握手錯誤，或點 i 閱讀排錯說明。' : 'Connection failed; the cause is not available here. Check the handshake error in Console / Network, or open i for troubleshooting.');
     };
-    row.append(select, apply); panel.append(header, row, error, updateLink); shadow.append(css, bubble, panel); document.body.append(host);
+    row.append(select, apply); panel.append(header, row, error, updateLink); shadow.append(css, bubble, panel, toast); document.body.append(host);
     expand(false);
     refresh = sync;
     unsubscribe = core.subscribe(sync);

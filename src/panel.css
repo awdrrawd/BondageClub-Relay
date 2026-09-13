@@ -29,3 +29,8 @@ header { cursor: grab; user-select: none; }
 .update-link { color: #d6b9ff; font-size: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .bubble[data-state="connecting"]::after { animation: none; } }
+.toast { position: absolute; right: calc(100% + 12px); bottom: 6px; width: max-content; padding: 10px 14px; border: 1px solid #bca1e5; border-radius: 10px; background: #211b2df5; color: #eee8f5; box-shadow: 0 4px 20px #0005; font: 13px/1.5 system-ui,sans-serif; overflow-wrap: anywhere; pointer-events: none; animation: toast-in .18s ease-out; }
+.toast[data-state^="failed"] { border-color: #f4c451; color: #ffda80; }
+.toast.above { right: 0; bottom: calc(100% + 12px); }
+@keyframes toast-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
