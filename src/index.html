@@ -1,22 +1,41 @@
 <!doctype html>
 <html lang="zh-Hant">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BC Relay</title>
-<link rel="stylesheet" href="/site.css">
-<main>
-  <p class="eyebrow">BONDAGE CLUB · CONNECTION RELAY</p>
-  <h1>保留官方遊戲，<br>多一條連線路徑。</h1>
-  <p>在官方遊戲頁面使用 Cloudflare 中繼。程式與素材仍由官方載入。</p>
-  <a class="install" href="/install.user.js">安裝／更新 Loader →</a>
-  <p class="hint">需要 Tampermonkey。首次改用 Loader 須更新一次插件；面板後續開頁自動載入最新版。</p>
-  <section aria-label="連線模式">
-    <article><b>A · 原版直連</b><p>預設模式，保留官方連線設定。</p></article>
-    <article><b>B · WebSocket</b><p>直接連官方，用於比較連線差異。</p></article>
-    <article><b>C · Cloudflare</b><p>登入與後續遊戲通訊都經此站中繼。</p></article>
-  </section>
-  <p>安裝後重開官方頁面，在右下角選模式並套用。登入後面板與輪詢會移除；重新整理可再次設定。</p>
-  <p class="hint">請只使用自己部署或信任的中繼。本頁不收取遊戲帳密，也不能取代官方頁面的載入。</p>
-  <footer><a href="/api/relay-status">中繼設定狀態</a><a href="https://github.com/awdrrawd/BondageClub-Relay">GitHub 倉庫</a></footer>
-</main>
-</html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BC Relay · 使用說明 / Guide</title><link rel="stylesheet" href="/site.css"></head>
+<body><main>
+<nav aria-label="Language"><a href="#zh">中文</a> · <a href="#en" lang="en">English</a></nav>
+<p class="eyebrow">BONDAGE CLUB · CONNECTION RELAY</p>
+<h1>BC Relay</h1>
+<p>官方遊戲，另一條連線路徑。<br><span lang="en">The official game, with an alternative connection route.</span></p>
+<a class="install" href="/install.user.js">安裝／更新 Loader · Install / Update →</a>
+<section id="zh" class="guide" lang="zh-Hant" aria-labelledby="zh-title">
+<h2 id="zh-title">使用說明</h2>
+<p>這是非官方、供學習與連線實驗使用的專案。官方頁面仍負責遊戲程式、圖片及音樂；插件只調整連線路徑，不是完整鏡像，也不能讓原本無法載入的官方頁面變得可達。</p>
+<h3>安裝與開始</h3>
+<ol><li>先安裝 Tampermonkey，並允許在官方遊戲頁執行使用者指令碼。</li><li>按上方安裝按鈕，確認安裝或更新；不要直接安裝 GitHub 的模板檔。只保留一份啟用的 BC Relay 插件。</li><li>重新開啟官方遊戲頁，在右下角選擇模式並按「套用」。切換會重新載入並斷開目前連線。</li><li>自行在官方頁面登入。登入後面板與輪詢會移除；需要重新設定時重新整理頁面。</li></ol>
+<h3>三種模式</h3>
+<ul><li><b>A · 原版直連：</b>預設模式，保留官方 Socket.IO 選項。</li><li><b>B · WebSocket 直連：</b>直接連官方伺服器，強制使用 WebSocket。</li><li><b>C · Cloudflare 中繼：</b>透過部署站連官方伺服器；握手、登入及後續遊戲訊息都經中繼，不會在登入後切回直連。</li></ul>
+<h3>狀態、更新與排錯</h3>
+<p>標題顯示連線中、連線成功或連線失敗；「連線成功」表示 Socket 已連線，不代表帳號已登入或所有遊戲功能正常。介面依瀏覽器語言顯示中文（zh／tw）或英文。</p>
+<p>面板 JS／CSS 在每次開頁載入最新版。最早攔截 Socket 的核心留在 Loader，透過 Tampermonkey 的更新檢查更新，必要時手動按「檢查更新」。部署站更新不會在遊戲中途熱替換程式。</p>
+<p>如果連線失敗，可切回 A 比較，檢查 Console 的 [BC Relay Test]，或在 Network → WS 查看 C 模式是否連到部署站且握手回應 101。「中繼設定狀態」頁面可開啟，不等於官方上游正常。停用插件並重載即可恢復原版連線。</p>
+<h3>學習用途與服務限制</h3>
+<p>本專案僅供學習、研究與連線測試，不保證穩定性、可用性、速度或持續提供服務。免費額度用盡、平台限制、維護或上游故障都可能造成限流、中斷或停止服務；維護者不承諾加購額度、恢復期限或補償，亦不對因此造成的使用影響或損失負責。請自行評估使用風險。</p>
+<p>請只使用自己部署或信任的中繼。安裝頁不要求帳密，程式不記錄登入與聊天內容，但 C 模式的登入及遊戲資料會流經中繼服務。自架者應自行管理平台帳號的額度及費用。</p>
+</section>
+<section id="en" class="guide" lang="en" aria-labelledby="en-title">
+<h2 id="en-title">User guide</h2>
+<p>This unofficial project is for learning and connection experiments. Game code, images and audio still come from the official page. It is not a full mirror and cannot make an inaccessible official page load.</p>
+<h3>Installation</h3>
+<ol><li>Install Tampermonkey and allow userscripts on the official game page.</li><li>Use the install button above. Do not install the GitHub template directly; keep only one BC Relay script enabled.</li><li>Reopen the official game page, select a mode in the lower-right panel and press Apply. Switching reloads the page and disconnects the current session.</li><li>Log in on the official page. The panel and its polling are removed after login; reload to configure again.</li></ol>
+<h3>Connection modes</h3>
+<ul><li><b>A · Native:</b> the default, preserving official Socket.IO options.</li><li><b>B · Direct WebSocket:</b> connects directly to the official server using WebSocket.</li><li><b>C · Cloudflare relay:</b> sends the handshake, login and subsequent game traffic through the deployment. It does not switch back to a direct connection after login.</li></ul>
+<h3>Status, updates and troubleshooting</h3>
+<p>The heading shows Connecting, Connected or Connection failed. Connected means the socket is connected, not that account login succeeded or every game feature works. The panel uses Chinese for zh/tw browser languages and English otherwise.</p>
+<p>Panel JS and CSS refresh on each page load. The early socket hook stays in the loader and updates through Tampermonkey's update checks; use Check for updates if needed. Code is not replaced during an active game.</p>
+<p>On failure, compare mode A, check [BC Relay Test] in Console, or inspect Network → WS for a connection to the relay deployment with handshake status 101 in mode C. A working status page does not prove upstream availability. Disable the userscript and reload to restore the native connection.</p>
+<h3>Educational use and service limitations</h3>
+<p>This project is for learning, research and connection testing only. Stability, availability, speed and continued service are not guaranteed. Exhausted free quotas, platform restrictions, maintenance or upstream failures may cause throttling, interruption or termination. The maintainer does not commit to buying extra quota, a restoration deadline or compensation, and accepts no responsibility for resulting disruption or losses. Assess the risks before use.</p>
+<p>Only use a relay you operate or trust. This installation page does not request credentials and the code does not log login or chat content, but mode C carries login and game data through the relay. Self-hosting operators are responsible for their own platform quotas and charges.</p>
+</section>
+<footer><a href="/api/relay-status">中繼狀態 / Relay status</a><a href="https://github.com/awdrrawd/BondageClub-Relay">GitHub</a></footer>
+</main></body></html>

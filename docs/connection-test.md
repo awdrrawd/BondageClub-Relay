@@ -100,3 +100,9 @@ Origin 限制不是對非瀏覽器程式的認證，任何公開中繼仍可能�
 GitHub Actions 在 main 推送、PR 與手動觸發時執行測試和建置。Dependabot 每月檢查 GitHub Actions 並開 PR，不自動合併。本倉庫目前沒有 npm 第三方依賴，因此未增加空的 npm 更新排程。
 
 推送後在 GitHub → Actions 確認 CI 成功；若要強制合併前通過測試，可在 Settings → Rules → Rulesets 為 main 加入必要狀態檢查 `verify`（需先有一次執行紀錄）。Cloudflare 維持原組建設定。
+
+## 面板語言與標題
+
+面板依瀏覽器 language 判斷，zh／tw（含 zh-TW、zh-CN 等）顯示中文，其餘英文。標題合併連線狀態，移除原本底部診斷文字；詳細診斷保留在 Console。連線成功只代表 Socket 連線，不代表登入完成。右上角 i 另開 https://bondageclub-relay.pages.dev/ 的中英說明。
+
+本專案僅供學習與測試，不保證穩定連線或持續服務；免費額度用盡造成中斷時，維護者不承諾加購、補償或承擔相關損失。完整聲明見 README 及安裝首頁。

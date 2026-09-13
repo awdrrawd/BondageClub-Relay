@@ -81,3 +81,28 @@ test('installer sets update URLs and relay rejects arbitrary upstreams',async()=
   assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/prod/',{headers:{Upgrade:'websocket',Origin:'https://evil.example'}}),env)).status,403);
   assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/other/'),env)).status,404);
 });
+
+test('panel localizes headings and controls, links help, and follows socket status',()=>{
+  for (const [language,connecting,connected,failed,apply] of [
+    ['zh-TW','連線中','連線成功','連線失敗','套用'],
+    ['zh-CN','連線中','連線成功','連線失敗','套用'],
+    ['tw','連線中','連線成功','連線失敗','套用'],
+    ['en-US','Connecting','Connected','Connection failed','Apply'],
+    ['ru','Connecting','Connected','Connection failed','Apply'],
+  ]) {
+    const h=harness();h.window.navigator={language};
+    vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+    const heading=h.nodes.find(n=>n.tag==='strong');
+    assert.equal(heading.textContent,`BC RELAY - ${connecting}`);
+    assert.equal(h.nodes.find(n=>n.tag==='button').textContent,apply);
+    const info=h.nodes.find(n=>n.tag==='a');
+    assert.equal(info.href,'https://bondageclub-relay.pages.dev/');assert.equal(info.target,'_blank');
+    assert.equal(h.nodes.filter(n=>n.tag==='p'||n.tag==='span').length,0);
+    const handlers=new Map();h.window.io=()=>({on:(event,fn)=>handlers.set(event,fn)});
+    h.window.io('https://bondage-club-server.herokuapp.com');
+    handlers.get('connect')();assert.equal(heading.textContent,`BC RELAY - ${connected}`);
+    handlers.get('connect_error')();assert.equal(heading.textContent,`BC RELAY - ${failed}`);
+    handlers.get('connect')();assert.equal(heading.textContent,`BC RELAY - ${connected}`);
+    handlers.get('disconnect')();assert.equal(heading.textContent,`BC RELAY - ${failed}`);
+  }
+});
