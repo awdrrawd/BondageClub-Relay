@@ -47,3 +47,9 @@ C 模式不只握手：登入與後續遊戲通訊都經 Cloudflare，不會登�
 仍需能載入官方頁面及素材。中繼可能改善網路路徑，但不能修復官方伺服器故障；登入成功實測只代表當時環境。
 
 Worker 限定官方 Origin 與固定上游，不記錄登入或聊天內容。Origin 檢查不是身分驗證，請使用自己部署或信任的中繼。本架構不需要素材儲存，用量仍受 Cloudflare 帳號方案限制。
+
+## Loader 分層
+
+src/client.user.js 是穩定的早期連線核心，暴露版本為 1 的 __BCRelayLoader 給遠端 UI 使用。src/runtime.js 管理面板與登入前輪詢；src/panel.css 使用 Shadow DOM 隔離樣式。src/index.html、src/site.css 是部署站安裝入口。
+
+runtime 或樣式更新不需要重裝；核心改動提高 userscript 版本，由管理器檢查更新。登入後面板及輪詢完全移除，登出不重建。這取代前述舊版僅隱藏面板的行為。

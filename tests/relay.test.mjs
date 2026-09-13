@@ -2,58 +2,82 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
-import worker,{officialOrigin} from '../src/worker.js';
-test('official origin allowlist rejects lookalikes and insecure origins',()=>{
- for(const origin of ['https://bondage-europe.com','https://www.bondageprojects.com','https://bondageeurope.com']) assert.equal(officialOrigin(origin),true);
- for(const origin of [null,'http://bondage-europe.com','https://bondage-europe.com.evil.example','https://evilbondage-europe.com','https://bondage-europe.com/path']) assert.equal(officialOrigin(origin),false);
-});
-
-test('userscript include and login polling support official pages and release timers',async()=>{
- const code=await readFile(new URL('../src/client.user.js',import.meta.url),'utf8');
- const pattern=/^\/\/ @include\s+\/(.*)\/$/m.exec(code)[1];const include=new RegExp(pattern);
- for(const url of ['https://www.bondageprojects.elementfx.com/R131/BondageClub/','https://bondageprojects.com/R131/BondageClub/','https://bondageeurope.com/R131/BondageClub/','https://bondage-asia.com/club/R132Beta1/BondageClub/'])assert.equal(include.test(url),true,url);
- for(const url of ['http://bondage-europe.com/R131/','https://bondage-europe.com.evil.example/R131/'])assert.equal(include.test(url),false,url);
- const timers=new Map(),events=new Map();let next=0,box;
- const window={setInterval:fn=>{timers.set(++next,fn);return next},clearInterval:id=>timers.delete(id),addEventListener:(name,fn)=>events.set(name,fn)};
- const document={readyState:'complete',createElement:()=>({style:{},append(){}}),body:{append:element=>{box=element}}};
- const messages=[];
- vm.runInNewContext(code.replace('"__RELAY_ORIGIN__"','"https://my-relay.pages.dev"'),{window,document,location:{pathname:'/R131/BondageClub/'},URL,localStorage:{getItem:()=>null},console:{info:(_prefix,_time,text)=>messages.push(text)},confirm:()=>false});
- assert.equal(messages.length,0,'loading alone must not report a missed interception');
- window.ServerSocket={};timers.values().next().value();assert.match(messages.at(-1),/官方 Socket 已建立/);
- assert.equal(box.hidden,false);assert.match(box.style.cssText,/bottom:8px/);assert.equal(timers.size,1);
- window.Player={MemberNumber:55};timers.values().next().value();assert.equal(box.hidden,true);
- window.Player={};timers.values().next().value();assert.equal(box.hidden,false);
- events.get('pagehide')();assert.equal(timers.size,0);
- events.get('pageshow')();events.get('pageshow')();assert.equal(timers.size,1);
-});
-test('unconfigured repository template warns before touching the official socket factory',async()=>{
- const code=await readFile(new URL('../src/client.user.js',import.meta.url),'utf8');
- const warnings=[];const io=()=>{};const window={io,alert:text=>warnings.push(text)};
- vm.runInNewContext(code,{window,location:{pathname:'/R131/BondageClub/'},console:{error(){}}});
- assert.equal(window.io,io);
- assert.equal(Object.getOwnPropertyDescriptor(window,'io').get,undefined);
- assert.equal(warnings.length,1);assert.match(warnings[0],/install\.user\.js/);
- assert.match(warnings[0],/原版連線/);
-});
-test('installer embeds its own origin and relay rejects arbitrary upstreams',async()=>{
- const env={ASSETS:{fetch:async()=>new Response('const relay = "__RELAY_ORIGIN__";')}};
- assert.equal(await (await worker.fetch(new Request('https://my-relay.pages.dev/install.user.js'),env)).text(),'const relay = "https://my-relay.pages.dev";');
- assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/prod/',{headers:{Upgrade:'websocket',Origin:'https://evil.example'}}),env)).status,403);
- assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/other/'),env)).status,404);
-});
-test('document-start hook preserves native mode and separates prod/test without login interception',async()=>{
- const code=(await readFile(new URL('../src/client.user.js',import.meta.url),'utf8')).replace('"__RELAY_ORIGIN__"','"https://my-relay.pages.dev"');
- for(const mode of ['native','websocket','relay']) {
-  const window={};const calls=[];
-  vm.runInNewContext(code,{window,location:{pathname:'/R131/BondageClub/',href:'https://bondage-europe.com/R131/BondageClub/'},URL,localStorage:{getItem:()=>mode},document:{readyState:'loading',addEventListener(){}},console:{info(){}},confirm:()=>false});
-  window.io=(...args)=>{calls.push(args);return {on(){}}};
-  for(const [host,env] of [['bondage-club-server.herokuapp.com','prod'],['bondage-club-server-test.herokuapp.com','test']]) {
-   window.io('https://'+host,{timeout:1234});const [url,options]=calls.at(-1);
-   assert.equal(url,mode==='relay'?'https://my-relay.pages.dev':'https://'+host);
-   assert.equal(options.timeout,1234);
-   if(mode!=='native')assert.equal(options.transports[0],'websocket');
-   if(mode==='relay')assert.equal(options.path,`/socket.io/${env}/`);
+import worker, {officialOrigin} from '../src/worker.js';
+const template = await readFile(new URL('../src/client.user.js', import.meta.url), 'utf8');
+const runtime = await readFile(new URL('../src/runtime.js', import.meta.url), 'utf8');
+const code = template.replace('"__RELAY_ORIGIN__"', '"https://my-relay.pages.dev"');
+function harness(mode='relay') {
+  const intervals = new Map(), events = new Map(), nodes = [], warnings = [];
+  let next=0;
+  function element(tag) {
+    const node={tag, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(){}, addEventListener(){}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
+    nodes.push(node);return node;
   }
-  window.io('https://unrelated.example');assert.equal(calls.at(-1)[0],'https://unrelated.example');
- }
+  const document={readyState:'complete',head:element('head'),documentElement:element('html'),body:element('body'),createElement:element,addEventListener:(key,fn)=>events.set('doc:'+key,fn),removeEventListener:key=>events.delete('doc:'+key)};
+  const window={setInterval:fn=>{intervals.set(++next,fn);return next},clearInterval:id=>intervals.delete(id),addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:key=>events.delete(key),alert:text=>warnings.push(text)};
+  const ctx=vm.createContext({window,document,location:{pathname:'/R131/BondageClub/',href:'https://bondage-europe.com/R131/BondageClub/'},URL,localStorage:{getItem:()=>mode},console:{info(){},error:text=>warnings.push(text)}});
+  return {window,document,ctx,nodes,intervals,events,warnings};
+}
+test('official URL scopes reject lookalikes',()=>{
+  const include=new RegExp(/^\/\/ @include\s+\/(.*)\/$/m.exec(template)[1]);
+  for(const host of ['bondageprojects.elementfx.com','bondageprojects.com','bondage-europe.com','bondageeurope.com','bondage-asia.com']) {
+    assert.ok(officialOrigin('https://'+host));
+    assert.ok(include.test('https://'+host+'/R132Beta1/BondageClub/'));
+  }
+  for(const origin of [null,'http://bondage-europe.com','https://bondage-europe.com.evil.example','https://evilbondage-europe.com']) assert.equal(officialOrigin(origin),false);
+  assert.equal(include.test('https://bondage-europe.com.evil.example/R131/BondageClub/'),false);
+});
+test('unconfigured template warns without touching io',()=>{
+  const h=harness();const io=()=>{};h.window.io=io;
+  vm.runInContext(template,h.ctx);
+  assert.equal(h.window.io,io);assert.match(h.warnings[0],/install.user.js/);
+  assert.equal(h.document.head.children.length,0);
+});
+test('early hook works before remote UI loads; all modes preserve server separation',()=>{
+  for(const mode of ['native','websocket','relay']) {
+    const h=harness(mode);vm.runInContext(code,h.ctx);
+    assert.equal(h.document.head.children[0].src,'https://my-relay.pages.dev/runtime.js');
+    const calls=[];h.window.io=(...args)=>{calls.push(args);return {on(){}}};
+    for(const [host,env] of [['bondage-club-server.herokuapp.com','prod'],['bondage-club-server-test.herokuapp.com','test']]) {
+      h.window.io('https://'+host,{timeout:1234});const [url,opts]=calls.at(-1);
+      assert.equal(url,mode==='relay'?'https://my-relay.pages.dev':'https://'+host);
+      assert.equal(opts.timeout,1234);
+      if(mode!=='native')assert.equal(opts.transports[0],'websocket');
+      if(mode==='relay')assert.equal(opts.path,`/socket.io/${env}/`);
+    }
+    h.document.head.children[0].onerror();
+    assert.match(h.warnings.at(-1),/面板載入失敗/);
+    h.window.io('https://unrelated.example');assert.equal(calls.at(-1)[0],'https://unrelated.example');
+  }
+});
+test('login event removes UI and timers permanently without disconnecting socket',()=>{
+  const h=harness();vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+  const host=h.document.body.children[0];assert.ok(host);assert.equal(h.intervals.size,1);
+  const handlers=new Map();let removed;
+  h.window.io=()=>({on:(name,fn)=>handlers.set(name,fn),off:(name,fn)=>{removed=[name,fn]}});
+  h.window.io('https://bondage-club-server.herokuapp.com');
+  handlers.get('LoginResponse')('InvalidNamePassword');assert.equal(host.removed,false);
+  handlers.get('LoginResponse')({MemberNumber:123});
+  assert.equal(host.removed,true);assert.equal(h.intervals.size,0);assert.equal(h.events.size,0);
+  assert.equal(removed[0],'LoginResponse');
+  handlers.get('disconnect')();handlers.get('connect')();
+  assert.equal(h.intervals.size,0);
+});
+test('poll fallback and late runtime both avoid leaving UI after login',()=>{
+  const h=harness();vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+  h.events.get('pagehide')();assert.equal(h.intervals.size,0);
+  h.events.get('pageshow')();assert.equal(h.intervals.size,1);
+  h.window.Player={MemberNumber:12};h.intervals.values().next().value();
+  assert.ok(h.document.body.children[0].removed);assert.equal(h.intervals.size,0);
+  const late=harness();vm.runInContext(code,late.ctx);late.window.__BCRelayLoader.finishLogin();vm.runInContext(runtime,late.ctx);
+  assert.equal(late.document.body.children.length,0);assert.equal(late.intervals.size,0);
+});
+test('installer sets update URLs and relay rejects arbitrary upstreams',async()=>{
+  const env={ASSETS:{fetch:async()=>new Response(template)}};
+  const res=await worker.fetch(new Request('https://my-relay.pages.dev/install.user.js'),env);
+  const installed=await res.text();assert.ok(!installed.includes('__INSTALL_URL__'));assert.ok(!installed.includes('__RELAY_ORIGIN__'));
+  assert.match(installed,/@updateURL\s+https:\/\/my-relay.pages.dev\/install.user.js/);
+  assert.equal(res.headers.get('Cache-Control'),'no-store');
+  assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/prod/',{headers:{Upgrade:'websocket',Origin:'https://evil.example'}}),env)).status,403);
+  assert.equal((await worker.fetch(new Request('https://my-relay.pages.dev/socket.io/other/'),env)).status,404);
 });

@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         BC Relay Connection Test
 // @namespace    https://github.com/awdrrawd/BondageClub-Relay
-// @version      0.1.2
+// @version      0.2.0
+// @updateURL    __INSTALL_URL__
+// @downloadURL  __INSTALL_URL__
 // @description  Compare native, direct WebSocket, and Cloudflare relay on official BC pages.
 // @include      /^https:\/\/(www\.)?(bondage(projects(\.elementfx)?|-(europe|asia))\.com|bondageeurope\.com)\/(club\/)?R[^/]*\/.*$/
 // @run-at       document-start
@@ -25,8 +27,23 @@
   try { mode = localStorage.getItem(key) || 'native'; } catch {}
   if (!['native','websocket','relay'].includes(mode)) mode = 'native';
   let status = '等待官方連線初始化', intercepted = false;
-  let statusNode;
-  const update = text => { status = text; if (statusNode) statusNode.textContent = text; console.info('[BC Relay Test]', new Date().toISOString(), text); };
+  if (window.__BCRelayLoader) return;
+  let loggedIn = false;
+  const subscribers = new Set();
+  const notify = () => { for (const fn of subscribers) { try { fn(); } catch (error) { console.error('[BC Relay UI]', error); } } };
+  const update = text => { status = text; notify(); console.info('[BC Relay Test]', new Date().toISOString(), text); };
+  const finishLogin = () => { loggedIn = true; notify(); subscribers.clear(); };
+  window.__BCRelayLoader = Object.freeze({
+    version: 1, relay, mode,
+    snapshot: () => ({status, intercepted, loggedIn}),
+    subscribe: fn => { subscribers.add(fn); return () => subscribers.delete(fn); },
+    finishLogin,
+    applyMode: value => {
+      if (!['native','websocket','relay'].includes(value)) return;
+      try { localStorage.setItem(key, value); location.reload(); }
+      catch { update('無法儲存模式，請檢查瀏覽器儲存權限'); }
+    },
+  });
   const wrapped = new WeakMap();
   function wrap(factory) {
     if (typeof factory !== 'function') return factory;
@@ -51,9 +68,14 @@
         socket.on('connect', () => update(`${mode} · ${env.toUpperCase()} · Socket 已連線`));
         socket.on('connect_error', () => update(`${mode} · 連線失敗，請檢查 Network / Console`));
         socket.on('disconnect', () => update(`${mode} · 已斷線`));
-        socket.on('LoginResponse', data => {
-          if (data && typeof data === 'object' && Number.isFinite(data.MemberNumber)) update(`${mode} · 登入成功（${data.Environment === 'PROD' ? 'PROD' : data.Environment === 'TEST' ? 'TEST' : '環境未回報'}）`);
-        });
+        const onLogin = data => {
+          if (data && typeof data === 'object' && Number.isFinite(data.MemberNumber)) {
+            update(`${mode} · 登入成功`);
+            finishLogin();
+            socket.off?.('LoginResponse', onLogin);
+          }
+        };
+        socket.on('LoginResponse', onLogin);
         return socket;
       },
     });
@@ -67,33 +89,15 @@
     let factory = wrap(window.io);
     Object.defineProperty(window, 'io', {configurable:true,enumerable:true,get:()=>factory,set:value=>{factory=wrap(value);}});
   } catch { update('未能攔截 io；此輪不能視為中繼測試，請停用其他連線插件後重載。'); }
-  function panel() {
-    const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#211b2d;color:#eee;border:1px solid #b69ae3;padding:8px;border-radius:8px;font:12px system-ui;max-width:300px';
-    const select = document.createElement('select'); select.title = '切換後重新載入頁面，會斷開目前遊戲';
-    for (const [value,text] of [['native','A 原版直連'],['websocket','B WebSocket 直連'],['relay','C Cloudflare 中繼']]) { const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option); }
-    select.value=mode;
-    const apply=document.createElement('button');apply.textContent='套用並重載';
-    apply.onclick=()=>{ if (confirm('切換會重新載入並斷開目前遊戲，確定套用？')) { try {localStorage.setItem(key,select.value);location.reload();} catch {update('無法儲存模式，請檢查瀏覽器儲存權限');} } };
-    statusNode=document.createElement('div');statusNode.textContent=status;
-    box.append(select,apply,statusNode);document.body.append(box);
-    // No SDK hook: keep one inexpensive poll so logout can reveal the controls again.
-    let missedConnectionReported = false;
-    const syncVisibility = () => {
-      box.hidden = window.Player?.MemberNumber != null;
-      // DOMContentLoaded precedes GameStart's async setup. Only report a missed
-      // interception when the game actually has a socket, not while it is loading.
-      if (!intercepted && window.ServerSocket && !missedConnectionReported) {
-        missedConnectionReported = true;
-        update('官方 Socket 已建立，但本插件未攔截；此輪尚未確認走中繼，請檢查插件注入時機或衝突。');
-      }
-    };
-    syncVisibility();
-    let visibilityTimer = window.setInterval(syncVisibility, 500);
-    window.addEventListener('pagehide', () => { window.clearInterval(visibilityTimer); visibilityTimer = null; });
-    window.addEventListener('pageshow', () => {
-      if (visibilityTimer === null) { syncVisibility(); visibilityTimer = window.setInterval(syncVisibility, 500); }
-    });
+  // The synchronous socket hook above must not wait for a remote download.
+  function loadUI() {
+    if (loggedIn || window.Player?.MemberNumber != null) return;
+    const script = document.createElement('script');
+    script.src = `${relay}/runtime.js`;
+    script.onerror = () => { console.error('[BC Relay Test] 面板載入失敗；連線核心仍使用已儲存模式：', mode); script.remove(); };
+    script.onload = () => script.remove();
+    (document.head || document.documentElement).append(script);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',panel,{once:true});else panel();
+  if (document.documentElement) loadUI();
+  else document.addEventListener('DOMContentLoaded', loadUI, {once:true});
 })();

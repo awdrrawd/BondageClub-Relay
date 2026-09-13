@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BC Relay</title>
+<link rel="stylesheet" href="/site.css">
+<main>
+  <p class="eyebrow">BONDAGE CLUB · CONNECTION RELAY</p>
+  <h1>保留官方遊戲，<br>多一條連線路徑。</h1>
+  <p>在官方遊戲頁面使用 Cloudflare 中繼。程式與素材仍由官方載入。</p>
+  <a class="install" href="/install.user.js">安裝／更新 Loader →</a>
+  <p class="hint">需要 Tampermonkey。首次改用 Loader 須更新一次插件；面板後續開頁自動載入最新版。</p>
+  <section aria-label="連線模式">
+    <article><b>A · 原版直連</b><p>預設模式，保留官方連線設定。</p></article>
+    <article><b>B · WebSocket</b><p>直接連官方，用於比較連線差異。</p></article>
+    <article><b>C · Cloudflare</b><p>登入與後續遊戲通訊都經此站中繼。</p></article>
+  </section>
+  <p>安裝後重開官方頁面，在右下角選模式並套用。登入後面板與輪詢會移除；重新整理可再次設定。</p>
+  <p class="hint">請只使用自己部署或信任的中繼。本頁不收取遊戲帳密，也不能取代官方頁面的載入。</p>
+  <footer><a href="/api/relay-status">中繼設定狀態</a><a href="https://github.com/awdrrawd/BondageClub-Relay">GitHub 倉庫</a></footer>
+</main>
+</html>

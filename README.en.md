@@ -30,3 +30,9 @@ After game updates, verify mode C's WebSocket destination, login, chat, room cha
 - [Architecture and maintenance (Chinese)](docs/architecture.md)
 
 The LICENSE covers this repository's own code. Official game and third-party code retain their respective licenses.
+
+## Loader lifecycle
+
+The installed loader hooks Socket.IO synchronously, before downloading the remote UI. `runtime.js` and CSS refresh on each page load; the early connection core remains in the loader to avoid a download race. Core changes require a version bump and are picked up by Tampermonkey's update checks through the deployment's updateURL/downloadURL. Install 0.2.0 once to migrate.
+
+Login removes the panel, its poll and lifecycle listeners permanently for that page. Reload to configure again. CI runs tests/build on main pushes and PRs; Dependabot checks GitHub Actions monthly without auto-merging.

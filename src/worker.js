@@ -12,7 +12,7 @@ export default {
     if (url.pathname === '/install.user.js' && request.method === 'GET') {
       const source = await env.ASSETS.fetch(new Request(new URL('/client-template.txt', url)));
       if (!source.ok) return new Response('Installer missing', {status:503});
-      return new Response((await source.text()).replace('"__RELAY_ORIGIN__"', JSON.stringify(url.origin)), {headers:{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'}});
+      return new Response((await source.text()).replace('"__RELAY_ORIGIN__"', JSON.stringify(url.origin)).replaceAll('__INSTALL_URL__', `${url.origin}/install.user.js`), {headers:{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'}});
     }
     if (url.pathname === '/api/relay-status') return Response.json({service:'bc-official-relay-test',version:1,paths:Object.keys(servers)},{headers:{'Cache-Control':'no-store'}});
     if (!url.pathname.startsWith('/socket.io/')) return env.ASSETS.fetch(request);

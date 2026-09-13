@@ -31,7 +31,7 @@ npm run build 與 npm run build:relay 都產生 dist-relay。插件依官方頁�
 4. 重開原本能使用的官方遊戲網址。支援 elementfx、bondageprojects.com、bondage-europe、bondageeurope 與 bondage-asia 的根域名及 www；不替你猜最新版本網址。
 5. 右下角應看到 A/B/C 下拉選單及狀態。預設 A；若看不到，先檢查 Tampermonkey 是否允許本站、是否在頁面環境 document-start 執行。
 
-插件使用 @include 正規式（指定域名及可選 www，保留亞洲站 /club/），每 500ms 檢查 Player.MemberNumber，登入後隱藏面板，登出且會員編號清除後重新顯示。隱藏後連線與錯誤狀態仍在 Console 的 [BC Relay Test] 訊息中。頁面離開會清除輪詢，不使用 SDK。
+Loader 在 document-start 安裝連線核心，再從部署站載入 runtime.js 與面板樣式。登入成功後移除面板、停止輪詢、移除面板事件；登出不重建，需要切換時重新整理。連線錯誤仍可在 Console 的 [BC Relay Test] 查看。
 
 ## 4. 測試顺序
 
@@ -86,3 +86,17 @@ B/C 都改善：可能是 WebSocket-only 有幫助；只有 C 改善：較支持
 停用或刪除 BC Relay Connection Test，再重新載入官方頁面，即恢復原版行為。插件不會改寫官方伺服器上的帳號設定。
 
 Origin 限制不是對非瀏覽器程式的認證，任何公開中繼仍可能被濫用；僅供初期小規模測試。沒有自動回退直連，也不會暗中改用正式服。
+
+## Loader 更新與自動化
+
+首次從旧版切換到 0.2.0，請從部署站 `/install.user.js` 安裝一次。之後：
+
+- `runtime.js`、面板 CSS：每次開頁從部署站載入，Cache-Control: no-store；重新整理才套用，不在遊戲中途熱更新。
+- Loader 的早期 Socket 攔截核心：為避免遠端下載比官方連線慢，仍內建於安裝腳本。修改時需提高 `@version`，Tampermonkey 依自己的更新排程從本站 updateURL／downloadURL 更新；必要時按「檢查更新」，不需手動複製程式。
+- Worker：隨 Cloudflare 部署更新，既有連線不保證立即切換版本。
+
+遠端面板載入失敗時，Console 會提示；已儲存模式的連線核心不依賴面板下載。若官方 CSP 禁止載入本站 script／style，需另行確認相容性。
+
+GitHub Actions 在 main 推送、PR 與手動觸發時執行測試和建置。Dependabot 每月檢查 GitHub Actions 並開 PR，不自動合併。本倉庫目前沒有 npm 第三方依賴，因此未增加空的 npm 更新排程。
+
+推送後在 GitHub → Actions 確認 CI 成功；若要強制合併前通過測試，可在 Settings → Rules → Rulesets 為 main 加入必要狀態檢查 `verify`（需先有一次執行紀錄）。Cloudflare 維持原組建設定。
