@@ -9,6 +9,20 @@
 
 [安裝與中英說明](https://bondageclub-relay.pages.dev/) · [English](README.en.md)
 
+## 使用 Tampermonkey 安裝
+
+1. 前往 [Tampermonkey 官方網站](https://www.tampermonkey.net/)，選擇自己的瀏覽器，從對應的官方擴充功能商店安裝。
+2. 確認 Tampermonkey 已啟用，並允許它在官方 BC 遊戲網站執行。若管理器提示需要「允許使用者指令碼」等權限，依提示完成設定。
+3. 開啟 [BC Relay 安裝頁](https://bondageclub-relay.pages.dev/)，按「安裝／更新 Loader」；也可直接開啟 [install.user.js](https://bondageclub-relay.pages.dev/install.user.js)。在 Tampermonkey 確認安裝。
+4. 在 Tampermonkey 管理面板確認 **BC Relay Connection Test** 已啟用，且只保留一份。不要直接複製倉庫的 `src/client.user.js`，它是未填入中繼網址的模板。
+5. 重新整理或重新開啟官方遊戲頁，點右下角氣球，選 **C · Cloudflare 中繼**，按「套用」並確認重新載入，再登入遊戲。預設 A 是原版直連。
+
+登入後氣球與輪詢會移除，需要重新設定時重新整理頁面。若沒有氣球，先檢查插件是否啟用、網站權限與其他連線插件衝突。
+
+**更新：**面板 JS／CSS 在重新開頁時載入；Loader 核心由 Tampermonkey 檢查更新，也可再次開啟上方安裝連結確認更新。自架者請使用自己的 Relay 站安裝連結。
+
+**只支援 Tampermonkey 方式作為中繼安裝。** 書籤與控制台注入通常晚於官方 Socket 初始化，不能可靠接管連線，因此不提供這兩種載入方式。
+
 ## 安裝與開發
 
 從部署站 `/install.user.js` 安裝或更新，不能直接安裝倉庫模板。遠端面板每次開頁載入最新版；早期連線核心由 Tampermonkey 更新檢查處理。

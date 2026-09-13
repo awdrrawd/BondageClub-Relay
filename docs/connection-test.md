@@ -23,15 +23,19 @@ npm run build 與 npm run build:relay 都產生 dist-relay。插件依官方頁�
 
 部署完成後打開配發的 pages.dev 網址。點「中繼設定狀態」應看到 bc-official-relay-test；這只證明 Worker 可執行，不代表上游 Socket 已驗證成功。
 
-## 3. 安裝插件
+## 3. 使用 Tampermonkey 安裝
 
-1. 瀏覽器先安裝官方商店的 Tampermonkey，允許 userscript 執行。不同瀏覽器可能需要在擴充功能頁啟用「允許使用者指令碼」。
-2. 在你自己的 Relay 首頁點「安裝 BC Relay Connection Test」，於 Tampermonkey 確認安裝。
-3. 不要直接安裝倉庫的 client.user.js，它還沒有填入你的 Relay 網址。使用本站 `/install.user.js` 產生的版本。
-4. 重開原本能使用的官方遊戲網址。支援 elementfx、bondageprojects.com、bondage-europe、bondageeurope 與 bondage-asia 的根域名及 www；不替你猜最新版本網址。
-5. 右下角應看到 A/B/C 下拉選單及狀態。預設 A；若看不到，先檢查 Tampermonkey 是否允許本站、是否在頁面環境 document-start 執行。
+1. 前往 [Tampermonkey 官方網站](https://www.tampermonkey.net/)，選擇自己的瀏覽器，從對應的官方擴充功能商店安裝。
+2. 確認 Tampermonkey 已啟用，並允許它在官方 BC 遊戲網站執行。若管理器提示需要「允許使用者指令碼」等權限，依提示完成設定。
+3. 開啟 [BC Relay 安裝頁](https://bondageclub-relay.pages.dev/)，按「安裝／更新 Loader」；也可直接開啟 [install.user.js](https://bondageclub-relay.pages.dev/install.user.js)。在 Tampermonkey 確認安裝。
+4. 在 Tampermonkey 管理面板確認 **BC Relay Connection Test** 已啟用，且只保留一份。不要直接複製倉庫的 `src/client.user.js`，它是未填入中繼網址的模板。
+5. 重新整理或重新開啟官方遊戲頁，點右下角氣球，選 **C · Cloudflare 中繼**，按「套用」並確認重新載入，再登入遊戲。預設 A 是原版直連。
 
-Loader 在 document-start 安裝連線核心，再從部署站載入 runtime.js 與面板樣式。登入成功後移除面板、停止輪詢、移除面板事件；登出不重建，需要切換時重新整理。連線錯誤仍可在 Console 的 [BC Relay Test] 查看。
+登入後氣球與輪詢會移除，需要重新設定時重新整理頁面。若沒有氣球，先檢查插件是否啟用、網站權限與其他連線插件衝突。
+
+**更新：**面板 JS／CSS 在重新開頁時載入；Loader 核心由 Tampermonkey 檢查更新，也可再次開啟上方安裝連結確認更新。自架者請使用自己的 Relay 站安裝連結。
+
+**只支援 Tampermonkey 方式作為中繼安裝。** 書籤與控制台注入通常晚於官方 Socket 初始化，不能可靠接管連線，因此不提供這兩種載入方式。
 
 ## 4. 測試顺序
 
