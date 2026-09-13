@@ -1,9 +1,10 @@
 import {mkdir,copyFile,writeFile} from 'node:fs/promises';
 import path from 'node:path';
-import {root} from './common.mjs';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
 const out=path.join(root,'dist-relay');await mkdir(out,{recursive:true});
-await copyFile(path.join(root,'relay-test/worker.js'),path.join(out,'_worker.js'));
-await copyFile(path.join(root,'relay-test/client.user.js'),path.join(out,'client-template.txt'));
+await copyFile(path.join(root,'src/worker.js'),path.join(out,'_worker.js'));
+await copyFile(path.join(root,'src/client.user.js'),path.join(out,'client-template.txt'));
 await writeFile(path.join(out,'_routes.json'),JSON.stringify({version:1,include:['/socket.io/*','/api/relay-status','/install.user.js'],exclude:[]}));
 await writeFile(path.join(out,'_headers'),'/*\n  Cache-Control: no-store\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n');
 await writeFile(path.join(out,'index.html'),'<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>BC 連線比較測試</title><body><h1>BC 連線比較測試</h1><p>本頁不登入遊戲。使用官方頁面與素材，只比較連線路徑。</p><ol><li>先安裝 Tampermonkey。</li><li><a href="/install.user.js">安裝 BC Relay Connection Test</a></li><li>重新開啟官方遊戲頁，右下角依序測試 A 原版直連、B WebSocket 直連、C Cloudflare 中繼。</li></ol><p>插件預設 A，不會自動切換路徑。C 模式的登入與遊戲流量均經此站中繼；請只使用你自己部署或信任的站點。</p><p><a href="/api/relay-status">中繼設定狀態</a> · <a href="https://github.com/awdrrawd/BondageClub-Relay">倉庫</a></p></body></html>');

@@ -19,7 +19,7 @@ Workers & Pages → 建立 Pages → 連接 GitHub → BondageClub-Relay。
 | Root directory | 留空 |
 | NODE_VERSION | 22 |
 
-**這次不是舊文件的 npm run check / dist。** 本測試不使用 relay.config.json 的 TEST 設定，而是依官方頁面原本要連的伺服器，分流到固定的 prod/test 上游，不更改官方 GameVersion。
+npm run build 與 npm run build:relay 都產生 dist-relay。插件依官方頁面原本要連的伺服器，分流到固定的 prod/test 上游，不更改官方 GameVersion。
 
 部署完成後打開配發的 pages.dev 網址。點「中繼設定狀態」應看到 bc-official-relay-test；這只證明 Worker 可執行，不代表上游 Socket 已驗證成功。
 
@@ -28,10 +28,10 @@ Workers & Pages → 建立 Pages → 連接 GitHub → BondageClub-Relay。
 1. 瀏覽器先安裝官方商店的 Tampermonkey，允許 userscript 執行。不同瀏覽器可能需要在擴充功能頁啟用「允許使用者指令碼」。
 2. 在你自己的 Relay 首頁點「安裝 BC Relay Connection Test」，於 Tampermonkey 確認安裝。
 3. 不要直接安裝倉庫的 client.user.js，它還沒有填入你的 Relay 網址。使用本站 `/install.user.js` 產生的版本。
-4. 重開原本能使用的官方遊戲網址。四組域名及其子域名都包含在匹配範圍；不替你猜最新版本網址。
+4. 重開原本能使用的官方遊戲網址。支援 elementfx、bondageprojects.com、bondage-europe、bondageeurope 與 bondage-asia 的根域名及 www；不替你猜最新版本網址。
 5. 右下角應看到 A/B/C 下拉選單及狀態。預設 A；若看不到，先檢查 Tampermonkey 是否允許本站、是否在頁面環境 document-start 執行。
 
-插件 0.1.1 使用 @include 正規式（指定域名及可選 www，保留亞洲站 /club/），每 500ms 檢查 Player.MemberNumber，登入後隱藏面板，登出且會員編號清除後重新顯示。隱藏後連線與錯誤狀態仍在 Console 的 [BC Relay Test] 訊息中。頁面離開會清除輪詢，不使用 SDK。
+插件使用 @include 正規式（指定域名及可選 www，保留亞洲站 /club/），每 500ms 檢查 Player.MemberNumber，登入後隱藏面板，登出且會員編號清除後重新顯示。隱藏後連線與錯誤狀態仍在 Console 的 [BC Relay Test] 訊息中。頁面離開會清除輪詢，不使用 SDK。
 
 ## 4. 測試顺序
 
@@ -81,7 +81,7 @@ B/C 都改善：可能是 WebSocket-only 有幫助；只有 C 改善：較支持
 
 ## 還原
 
-更新插件也必須從自己部署站的 `/install.user.js` 安裝。倉庫的 `relay-test/client.user.js` 是模板，未包含 Relay 網址；直接複製它不會啟用中繼。0.1.1 在 C 模式會因此中斷遊戲初始化；0.1.2 會先明確提示並停用插件，保留原版連線，需正確重裝後才能測試 C。
+更新插件也必須從自己部署站的 `/install.user.js` 安裝。倉庫的 `src/client.user.js` 是模板，未包含 Relay 網址；直接複製它不會啟用中繼。0.1.1 在 C 模式會因此中斷遊戲初始化；0.1.2 會先明確提示並停用插件，保留原版連線，需正確重裝後才能測試 C。
 
 停用或刪除 BC Relay Connection Test，再重新載入官方頁面，即恢復原版行為。插件不會改寫官方伺服器上的帳號設定。
 

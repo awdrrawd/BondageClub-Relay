@@ -1,22 +1,25 @@
 # BondageClub Relay
 
-**目前優先測試：[官方頁面 A/B/C 連線比較](docs/connection-test.md)**。此模式用 `npm run build:relay`、輸出 `dist-relay`，不需要素材 CDN。下方完整鏡像模式仍保留，尚未就緒。
+在官方 Bondage Club 頁面使用 Cloudflare Pages Worker 中繼遊戲連線。遊戲程式與素材仍由官方提供，本倉庫不是遊戲鏡像。
 
-獨立的完整 BC 客戶端試驗站。沿用官方遊戲程式，透過 Cloudflare Pages Worker 中繼 Socket.IO；圖片、音樂由瀏覽器向外部素材站取得。不修改 BondageClub-Lite。
+- A：原版直連；B：WebSocket 直連；C：Cloudflare WebSocket 中繼。
+- C 模式的登入與後續遊戲訊息都經中繼，不只握手。
+- 預設 A，切換會重新載入；登入後隱藏面板。
+- 從部署站的 `/install.user.js` 安裝與更新，不能直接安裝倉庫模板。
 
-**目前：部署工具已建立，素材站尚未就緒，不能當作可登入遊戲站。** 指定來源是 `R132Beta1`，因此預設 TEST，不能直接切換成 PROD。
-
-- [新手設定與 Cloudflare 部署](docs/setup.md)
-- [架構與限制](docs/architecture.md)
-- [English](README.en.md)
+## 部署
 
 ```sh
 npm ci
-npm test
-npm run build
-npm run check:assets
+npm run check
 ```
 
-build 下載 `upstream-version.txt` 的固定提交到 `.cache`，產生 `dist`。不使用或修改手動放入 `upstream` 的檔案，不需要將幾萬張素材提交到倉庫。
+現有 Cloudflare 設定可沿用：組建 `npm test && npm run build:relay`、輸出 `dist-relay`、NODE_VERSION 為 22。`npm run build` 與 `build:relay` 使用同一流程。
 
-本倉庫 LICENSE 僅適用自有部署程式；官方 BC 程式與各第三方檔案保留原作者的權利、授權和使用條件，並非因此改授權為 MIT。
+- [部署、安裝與排錯](docs/connection-test.md)
+- [架構與遊戲更新維護](docs/architecture.md)
+- [English](README.en.md)
+
+不需要官方來源 SHA、R2 或素材 CDN。舊鏡像建置流程已移除；本機殘留的 upstream、.cache、dist 不參與建置，也不應提交。
+
+LICENSE 僅適用本倉庫自有程式，官方遊戲及第三方程式保留各自授權。

@@ -1,3 +1,0 @@
-Repository: https://github.com/awdrrawd/Bondage-College-Mirror
-Branch: bondageclub
-Commit: 4f8006001a0432e4ff7058d2b330084624a94217
