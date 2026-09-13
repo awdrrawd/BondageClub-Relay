@@ -49,3 +49,12 @@ test('Pages query uses the String scalar shown by the dashboard',async()=>{
  assert.ok(!captured.includes(': string'));
  assert.equal((captured.match(/pagesFunctionsInvocationsAdaptiveGroups\(/g)||[]).length,3);
 });
+
+test('failure categories expose no raw upstream messages',async()=>{
+ for (const [message,reason] of [['Unknown type String private-token','query_schema'],['not authorized private-token','authorization'],['query limit exceeded private-token','query_limit']]) {
+  const monitor=createMonitor({clock:()=>date,fetcher:async()=>Response.json({errors:[{message}]})});
+  const result=await (await monitor(request(),env,'Relay')).json();
+  assert.equal(result.reason,reason);
+  assert.ok(!JSON.stringify(result).includes('private-token'));
+ }
+});

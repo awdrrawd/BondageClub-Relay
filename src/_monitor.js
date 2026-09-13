@@ -54,7 +54,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
       // A configuration fingerprint prevents serving a previous project's cached metrics.
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(key));
       const fingerprint=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
-      const cacheKey=new Request(`${url.origin}/__monitor_cache_v1/${fingerprint}`);
+      const cacheKey=new Request(`${url.origin}/__monitor_cache_v2/${fingerprint}`);
       const cache=globalThis.caches?.default;
       try {
         const hit=await cache?.match(cacheKey);
@@ -64,7 +64,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
           if (expires>clock()) return {data,expires};
         }
       } catch { /* Cache is an optimization, not an availability requirement. */ }
-      let data;
+      let data, reason = 'network';
       try {
         const end=new Date(now).toISOString();
         const res=await fetcher('https://api.cloudflare.com/client/v4/graphql',{
@@ -72,13 +72,22 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
           body:JSON.stringify({query,variables:{account,script,start:new Date(now-86400000).toISOString(),today:end.slice(0,10)+'T00:00:00.000Z',end}}),
           signal:AbortSignal.timeout(10000),redirect:'error',
         });
+        reason = res.status === 401 || res.status === 403 ? 'authorization' : res.status === 429 ? 'rate_limit' : 'upstream_http';
         if (!res.ok) throw new Error('upstream');
+        reason = 'invalid_response';
         const body=await res.json();
-        if (body.errors?.length) throw new Error('graphql');
+        if (body.errors?.length) {
+          const messages = body.errors.map(error => String(error.message || '')).join(' ');
+          reason = /permission|not authorized|unauthorized|authentication|access denied|forbidden/i.test(messages) ? 'authorization'
+            : /limit|quota|too many|too wide/i.test(messages) ? 'query_limit'
+            : /unknown|type|syntax|field|argument|variable|enum/i.test(messages) ? 'query_schema' : 'graphql';
+          throw new Error('graphql');
+        }
+        reason = 'response_shape';
         data=summarize(body.data?.viewer?.accounts?.[0],now,label);
       } catch {
         // Never send CF errors, token, script identifiers or raw response fields to visitors.
-        data={state:'unavailable',project:label,updatedAt:new Date(now).toISOString()};
+        data={state:'unavailable',reason,project:label,updatedAt:new Date(now).toISOString()};
       }
       try { await cache?.put(cacheKey,new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Cache-Control':'public, max-age=300'}})); } catch {}
       return {data,expires:now+TTL};
