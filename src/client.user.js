@@ -6,6 +6,7 @@
 // @downloadURL  __INSTALL_URL__
 // @description  Compare native, direct WebSocket, and Cloudflare relay on official BC pages.
 // @include      /^https:\/\/(www\.)?(bondage(projects(\.elementfx)?|-(europe|asia))\.com|bondageeurope\.com)\/(club\/)?R[^/]*\/.*$/
+// @icon         https://raw.githubusercontent.com/awdrrawd/liko-Plugin-Repository/main/Images/PCM_ICON.png
 // @run-at       document-start
 // @grant        none
 // @sandbox      raw
