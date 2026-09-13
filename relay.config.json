@@ -1,0 +1,8 @@
+{
+  "environment": "TEST",
+  "expectedGameVersion": "R132Beta1",
+  "assetBase": "",
+  "assetGameVersion": "R132Beta1",
+  "assetProbes": ["Icons/Logo.png", "Assets/Female3DCG/BodyUpper/FlatSmall_White.png", "Audio/BeepAlarm.mp3"],
+  "bcOrigin": "https://bondageprojects.elementfx.com"
+}
