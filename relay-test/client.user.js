@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         BC Relay Connection Test
 // @namespace    https://github.com/awdrrawd/BondageClub-Relay
-// @version      0.1.1
+// @version      0.1.2
 // @description  Compare native, direct WebSocket, and Cloudflare relay on official BC pages.
-// @include      /^https:\/\/(www\.)?(bondage(projects\.elementfx|-(europe|asia))\.com|bondageeurope\.com)\/(club\/)?R[^/]*\/.*$/
+// @include      /^https:\/\/(www\.)?(bondage(projects(\.elementfx)?|-(europe|asia))\.com|bondageeurope\.com)\/(club\/)?R[^/]*\/.*$/
 // @run-at       document-start
 // @grant        none
 // @sandbox      raw
@@ -13,6 +13,13 @@
   'use strict';
   if (!/\/R[^/]*\/BondageClub\//i.test(location.pathname)) return;
   const relay = "__RELAY_ORIGIN__";
+  // Repository copies are templates. Reject them before touching the game's io.
+  if (!relay.startsWith('https://')) {
+    const message = '[BC Relay Test] 此檔案是未設定 Relay 網址的模板，插件未啟用。請從你部署的 Relay 網站 /install.user.js 重新安裝，再重新整理遊戲。目前遊戲仍使用原版連線，不是 Cloudflare 中繼。';
+    console.error(message);
+    window.alert(message);
+    return;
+  }
   const key = 'bc-relay-test-mode-v1';
   let mode = 'native';
   try { mode = localStorage.getItem(key) || 'native'; } catch {}
@@ -35,7 +42,6 @@
         if (mode !== 'native') {
           const options = {...(args[1] || {}),transports:['websocket'],upgrade:false};
           if (mode === 'relay') {
-            if (!relay.startsWith('https://')) throw new Error('Install this script from your Relay site /install.user.js');
             options.path = `/socket.io/${env}/`;
           }
           next = [mode === 'relay' ? relay : args[0], options];
@@ -72,14 +78,22 @@
     statusNode=document.createElement('div');statusNode.textContent=status;
     box.append(select,apply,statusNode);document.body.append(box);
     // No SDK hook: keep one inexpensive poll so logout can reveal the controls again.
-    const syncVisibility = () => { box.hidden = window.Player?.MemberNumber != null; };
+    let missedConnectionReported = false;
+    const syncVisibility = () => {
+      box.hidden = window.Player?.MemberNumber != null;
+      // DOMContentLoaded precedes GameStart's async setup. Only report a missed
+      // interception when the game actually has a socket, not while it is loading.
+      if (!intercepted && window.ServerSocket && !missedConnectionReported) {
+        missedConnectionReported = true;
+        update('官方 Socket 已建立，但本插件未攔截；此輪尚未確認走中繼，請檢查插件注入時機或衝突。');
+      }
+    };
     syncVisibility();
     let visibilityTimer = window.setInterval(syncVisibility, 500);
     window.addEventListener('pagehide', () => { window.clearInterval(visibilityTimer); visibilityTimer = null; });
     window.addEventListener('pageshow', () => {
       if (visibilityTimer === null) { syncVisibility(); visibilityTimer = window.setInterval(syncVisibility, 500); }
     });
-    if (!intercepted) update('尚未觀察到官方 io 呼叫；若已登入，代表插件注入太晚，本輪無效。');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',panel,{once:true});else panel();
 })();
