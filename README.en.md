@@ -30,3 +30,7 @@ No upstream checkout, pinned game SHA, R2 or asset CDN is required. GitHub CI ru
 For learning, research and connection testing only. Stability, availability, speed and continued service are not guaranteed. Exhausted free quotas, platform restrictions, maintenance or upstream failures may cause throttling, interruption or termination. The maintainer does not commit to purchasing extra quota, a restoration deadline or compensation, and accepts no responsibility for resulting disruption or losses. Users assess their own risks; self-hosting operators manage their own quotas and charges.
 
 Use only a relay you operate or trust. The code does not log login or chat content, but mode C carries that data through the relay. The LICENSE covers this repository's own code; official and third-party code retain their respective licenses.
+
+## Public load monitor
+
+The `/monitor/` page publishes aggregate usage only, with no game probes. Configure read-only Cloudflare monitoring secrets first. [Setup](docs/monitor.md).

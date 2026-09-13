@@ -1,3 +1,4 @@
+import {monitor} from './_monitor.js';
 const hosts = ['bondageprojects.elementfx.com', 'bondage-europe.com', 'bondageprojects.com', 'bondage-asia.com', 'bondageeurope.com'];
 export function officialOrigin(value) {
   try { const u = new URL(value); return u.protocol === 'https:' && u.origin === value && hosts.some(h => u.hostname === h || u.hostname.endsWith('.' + h)); } catch { return false; }
@@ -9,6 +10,7 @@ const servers = {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/monitor") return monitor(request, env, "BC Relay");
     if (url.pathname === '/install.user.js' && request.method === 'GET') {
       const source = await env.ASSETS.fetch(new Request(new URL('/client-template.txt', url)));
       if (!source.ok) return new Response('Installer missing', {status:503});
