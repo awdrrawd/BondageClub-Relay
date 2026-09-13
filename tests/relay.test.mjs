@@ -10,11 +10,11 @@ function harness(mode='relay') {
   const intervals = new Map(), events = new Map(), nodes = [], warnings = [];
   let next=0;
   function element(tag) {
-    const node={tag, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(){}, addEventListener(){}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
+    const node={tag, tagName:tag.toUpperCase(),style:{},handlers:new Map(),attrs:{}, getBoundingClientRect:()=>({width:340,height:180}), focus(){}, children:[], removed:false, append(...children){this.children.push(...children)}, remove(){this.removed=true}, setAttribute(key,value){this.attrs[key]=value}, addEventListener(key,fn){this.handlers.set(key,fn)},removeEventListener(key){this.handlers.delete(key)}, attachShadow(){this.shadow=element('shadow');return this.shadow}};
     nodes.push(node);return node;
   }
   const document={readyState:'complete',head:element('head'),documentElement:element('html'),body:element('body'),createElement:element,addEventListener:(key,fn)=>events.set('doc:'+key,fn),removeEventListener:key=>events.delete('doc:'+key)};
-  const window={setInterval:fn=>{intervals.set(++next,fn);return next},clearInterval:id=>intervals.delete(id),addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:key=>events.delete(key),alert:text=>warnings.push(text)};
+  const window={innerWidth:800,innerHeight:600,setInterval:fn=>{intervals.set(++next,fn);return next},clearInterval:id=>intervals.delete(id),addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:key=>events.delete(key),alert:text=>warnings.push(text)};
   const ctx=vm.createContext({window,document,location:{pathname:'/R131/BondageClub/',href:'https://bondage-europe.com/R131/BondageClub/'},URL,localStorage:{getItem:()=>mode},console:{info(){},error:text=>warnings.push(text)}});
   return {window,document,ctx,nodes,intervals,events,warnings};
 }
@@ -94,10 +94,10 @@ test('panel localizes headings and controls, links help, and follows socket stat
     vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
     const heading=h.nodes.find(n=>n.tag==='strong');
     assert.equal(heading.textContent,`BC RELAY - ${connecting}`);
-    assert.equal(h.nodes.find(n=>n.tag==='button').textContent,apply);
+    assert.equal(h.nodes.find(n=>n.tag==='button' && n.className!=='bubble').textContent,apply);
     const info=h.nodes.find(n=>n.tag==='a');
     assert.equal(info.href,'https://bondageclub-relay.pages.dev/');assert.equal(info.target,'_blank');
-    assert.equal(h.nodes.filter(n=>n.tag==='p'||n.tag==='span').length,0);
+    assert.equal(h.nodes.find(n=>n.className==='error').hidden,true);
     const handlers=new Map();h.window.io=()=>({on:(event,fn)=>handlers.set(event,fn)});
     h.window.io('https://bondage-club-server.herokuapp.com');
     handlers.get('connect')();assert.equal(heading.textContent,`BC RELAY - ${connected}`);
@@ -105,4 +105,24 @@ test('panel localizes headings and controls, links help, and follows socket stat
     handlers.get('connect')();assert.equal(heading.textContent,`BC RELAY - ${connected}`);
     handlers.get('disconnect')();assert.equal(heading.textContent,`BC RELAY - ${failed}`);
   }
+});
+
+test('bubble expands, closes outside, drags without opening, clamps and cleans up',()=>{
+  const h=harness();vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
+  const bubble=h.nodes.find(n=>n.className==='bubble'), panel=h.nodes.find(n=>n.className==='panel');
+  const host=h.document.body.children[0], shadow=host.shadow;
+  assert.equal(panel.hidden,true);assert.equal(bubble.hidden,false);
+  assert.equal(h.nodes.find(n=>n.className==='sprite relay').tag,'span');
+  bubble.handlers.get('click')();assert.equal(panel.hidden,false);
+  h.events.get('doc:pointerdown')({composedPath:()=>[panel,shadow,host]});assert.equal(panel.hidden,false);
+  h.events.get('doc:pointerdown')({composedPath:()=>[]});assert.equal(panel.hidden,true);
+  const down={button:0,pointerId:1,clientX:700,clientY:500,composedPath:()=>[bubble,shadow,host]};
+  shadow.handlers.get('pointerdown')(down);
+  h.events.get('pointermove')({pointerId:1,clientX:600,clientY:400,preventDefault(){}});
+  h.events.get('pointerup')({pointerId:1});bubble.handlers.get('click')();
+  assert.equal(panel.hidden,true);assert.equal(host.style.right,'112px');assert.equal(host.style.bottom,'112px');
+  shadow.handlers.get('pointerdown')(down);h.events.get('pointerup')({pointerId:1});bubble.handlers.get('click')();
+  assert.equal(panel.hidden,false);
+  h.window.innerWidth=360;h.events.get('resize')();assert.equal(host.style.right,'12px');
+  h.window.__BCRelayLoader.finishLogin();assert.equal(h.events.size,0);assert.equal(h.intervals.size,0);
 });

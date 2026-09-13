@@ -5,7 +5,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const out=path.join(root,'dist-relay');await mkdir(out,{recursive:true});
 await copyFile(path.join(root,'src/worker.js'),path.join(out,'_worker.js'));
 await copyFile(path.join(root,'src/client.user.js'),path.join(out,'client-template.txt'));
-for (const file of ['runtime.js','panel.css','index.html','site.css']) await copyFile(path.join(root,'src',file),path.join(out,file));
+for (const file of ['runtime.js','panel.css','index.html','site.css','icon.webp']) await copyFile(path.join(root,'src',file),path.join(out,file));
 await writeFile(path.join(out,'_routes.json'),JSON.stringify({version:1,include:['/socket.io/*','/api/relay-status','/install.user.js'],exclude:[]}));
 await writeFile(path.join(out,'_headers'),'/*\n  Cache-Control: no-store\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n');
 console.log('Built dist-relay: official-page test only; no upstream download or CDN required.');

@@ -21,12 +21,15 @@
     return /已連線|登入成功/.test(state.status) ? 'connected' : 'connecting';
   }
   let host, timer, unsubscribe;
+  let refresh = () => {};
+  const cleanups = [];
   let disposed = false;
   const dispose = () => {
     disposed = true;
     window.clearInterval(timer);
     timer = undefined;
     unsubscribe?.();
+    for (const cleanup of cleanups.splice(0)) cleanup();
     host?.remove();
     host = undefined;
     document.removeEventListener('DOMContentLoaded', mount);
@@ -43,7 +46,7 @@
   };
   function pause() { window.clearInterval(timer); timer = undefined; }
   function resume() {
-    if (!disposed && !checkLogin() && timer === undefined) timer = window.setInterval(checkLogin, 500);
+    if (!disposed && !checkLogin() && timer === undefined) timer = window.setInterval(() => { if (!checkLogin()) refresh(); }, 500);
   }
   function mount() {
     if (disposed || checkLogin()) return;
@@ -52,6 +55,10 @@
     const shadow = host.attachShadow({mode:'open'});
     const css = document.createElement('link');
     css.rel = 'stylesheet'; css.href = `${core.relay}/panel.css`;
+    const bubble = document.createElement('button'); bubble.className = 'bubble';
+    const icon = document.createElement('span'); icon.className = `sprite ${core.mode}`;
+    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = '!'; badge.setAttribute('aria-hidden','true');
+    bubble.append(icon, badge);
     const panel = document.createElement('section'); panel.className = 'panel';
     panel.setAttribute('aria-label', t.panel);
     panel.lang = chinese ? 'zh-Hant' : 'en';
@@ -71,12 +78,64 @@
     apply.addEventListener('click', () => {
       if (window.confirm(t.confirm)) core.applyMode(select.value);
     });
+    const error = document.createElement('p'); error.className = 'error';
+    const updateLink = document.createElement('a'); updateLink.className = 'update-link';
+    updateLink.href = `${core.relay}/install.user.js`; updateLink.target = '_blank'; updateLink.rel = 'noopener noreferrer';
+    updateLink.textContent = chinese ? '檢查／更新 Loader ↗' : 'Check / update loader ↗';
+    const listen = (target, event, fn, options) => {
+      target.addEventListener(event, fn, options);
+      cleanups.push(() => target.removeEventListener(event, fn, options));
+    };
+    let expanded = false, drag = null, suppressClick = false;
+    let right = 12, bottom = 12;
+    const clamp = () => {
+      const rect = host.getBoundingClientRect();
+      right = Math.max(8, Math.min(right, Math.max(8, window.innerWidth - rect.width - 8)));
+      bottom = Math.max(8, Math.min(bottom, Math.max(8, window.innerHeight - rect.height - 8)));
+      host.style.right = `${right}px`; host.style.bottom = `${bottom}px`;
+    };
+    const expand = value => {
+      expanded = value; panel.hidden = !value; bubble.hidden = value;
+      bubble.setAttribute('aria-expanded', String(value)); clamp();
+    };
+    listen(bubble, 'click', () => { if (!suppressClick) expand(true); suppressClick = false; });
+    listen(document, 'pointerdown', event => {
+      if (expanded && !event.composedPath().includes(host)) expand(false);
+    }, true);
+    listen(document, 'keydown', event => { if (event.key === 'Escape' && expanded) { expand(false); bubble.focus(); } });
+    listen(window, 'resize', clamp);
+    listen(shadow, 'pointerdown', event => {
+      if (event.button !== 0 || event.isPrimary === false) return;
+      if (event.composedPath().some(node => ['SELECT','A'].includes(node.tagName) || (node.tagName === 'BUTTON' && node !== bubble))) return;
+      suppressClick = false;
+      drag = {id:event.pointerId, x:event.clientX, y:event.clientY, right, bottom, moved:false};
+    });
+    listen(window, 'pointermove', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx,dy) < 5) return;
+      drag.moved = true; event.preventDefault();
+      right = drag.right - dx; bottom = drag.bottom - dy; clamp();
+    }, {passive:false});
+    const endDrag = event => { if (drag && event.pointerId === drag.id) { suppressClick = drag.moved; drag = null; } };
+    listen(window, 'pointerup', endDrag); listen(window, 'pointercancel', endDrag);
     const sync = () => {
       if (checkLogin()) return;
       const state = core.snapshot();
-      heading.textContent = `BC RELAY - ${t[connectionState(state)]}`;
+      const connection = connectionState(state);
+      heading.textContent = `BC RELAY - ${t[connection]}`;
+      bubble.setAttribute('aria-label', `${heading.textContent} · ${t.panel}`);
+      bubble.title = heading.textContent; bubble.setAttribute('data-state', connection);
+      badge.hidden = connection !== 'failed'; error.hidden = updateLink.hidden = connection !== 'failed';
+      error.textContent = !state.intercepted || /未能攔截/.test(state.status)
+        ? (chinese ? '未能攔截官方連線。請更新 Loader、重新載入，並檢查其他連線插件是否衝突。' : 'The official connection was not intercepted. Update the loader, reload, and check for conflicting mods.')
+        : /已斷線/.test(state.status)
+          ? (chinese ? 'Socket 已斷線，等待重新連線。若持續發生，請查看 Console／Network 或改用 A 比較。' : 'Socket disconnected. Waiting for reconnection. Check Console / Network or compare mode A if it persists.')
+          : (chinese ? '連線建立失敗；目前無法判定原因。請查看 Console／Network 的握手錯誤，或點 i 閱讀排錯說明。' : 'Connection failed; the cause is not available here. Check the handshake error in Console / Network, or open i for troubleshooting.');
     };
-    row.append(select, apply); panel.append(header, row); shadow.append(css, panel); document.body.append(host);
+    row.append(select, apply); panel.append(header, row, error, updateLink); shadow.append(css, bubble, panel); document.body.append(host);
+    expand(false);
+    refresh = sync;
     unsubscribe = core.subscribe(sync);
     sync();
     if (!disposed) {
