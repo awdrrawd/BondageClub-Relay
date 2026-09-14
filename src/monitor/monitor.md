@@ -111,3 +111,16 @@ Data may be delayed/sampled and is not billing, remaining shared quota or game h
 - 公開頁保留查詢失敗分類與執行錯誤總數；詳細 exception/stack 請在 Cloudflare 管理台查看，不會公開憑證或原始日誌。
 
 Weekly/monthly cards show requests per day over the previous 7/30 complete UTC days, including inactive and pre-deployment dates. History is split into windows of at most seven days and fetched independently; unavailable history never blocks the 24-hour metrics. Invocation errors are distinct from HTTP errors and game connectivity. Raw logs remain in Cloudflare.
+
+## 分頁與 UI 參考
+
+- 總覽：今日、24 小時請求、執行錯誤與錯誤率，以及請求趨勢。
+- 週月統計：7／30 日平均、期間總量與計算範圍。
+- 錯誤：執行錯誤、錯誤率、小時錯誤趨勢與排錯說明。
+- 效能：CPU P50/P99 與判讀方式；不以 CPU 推估連線延遲。
+- 點擊分頁不重新呼叫 API，支援方向鍵與 Home/End 切換；方法與限制預設收合。
+
+參考資訊層次與卡片編排，未複製程式碼或新增套件：
+[Umami](https://github.com/umami-software/umami)（查閱時約 38.8k stars）、
+[Plausible](https://github.com/plausible/analytics)（約 29.1k）、
+[Tremor](https://github.com/tremorlabs/tremor)（約 3.6k）。星數查閱日期：2026-09-14。
