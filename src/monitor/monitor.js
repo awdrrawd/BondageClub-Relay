@@ -81,9 +81,34 @@
     if(view==='errors') $('chartTitle').textContent=zh?'最近 24 小時執行錯誤':'Invocation errors over the last 24 hours';
     $('chart').replaceChildren();$('chart').setAttribute('aria-label',$('chartTitle').textContent);
     if(hours.length){
-      const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 1000 160');svg.setAttribute('aria-hidden','true');
-      const max=Math.max(1,...hours.map(h=>h[chartMetric]||0)),width=1000/hours.length;
-      hours.forEach((h,i)=>{const rect=document.createElementNS(ns,'rect'),height=(h[chartMetric]||0)/max*150;rect.setAttribute('x',String(i*width+2));rect.setAttribute('y',String(155-height));rect.setAttribute('width',String(Math.max(1,width-4)));rect.setAttribute('height',String(height));const tip=document.createElementNS(ns,'title');tip.textContent=`${h.hour} · ${format(h.requests)} ${t.requests} · ${format(h.errors)} ${t.errors}`;rect.append(tip);svg.append(rect)});$('chart').append(svg);
+      const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+      svg.setAttribute('viewBox','0 0 720 260');svg.setAttribute('aria-hidden','true');
+      const node=(tag,attrs,text)=>{const el=document.createElementNS(ns,tag);for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));if(text!==undefined)el.textContent=text;svg.append(el);return el};
+      const left=88,top=30,plotWidth=612,plotHeight=175;
+      const peak=Math.max(0,...hours.map(h=>h[chartMetric]||0));
+      const step=Math.max(1,10**Math.floor(Math.log10(Math.max(1,peak/4))));
+      const tickStep=Math.max(1,Math.ceil(peak/4/step)*step),max=tickStep*4;
+      node('text',{x:left,y:16,class:'axis-caption'},view==='errors'?t.errors:t.requests);
+      for(let i=0;i<=4;i++){
+        const y=top+plotHeight-i*plotHeight/4;
+        node('line',{x1:left,x2:left+plotWidth,y1:y,y2:y,class:'grid-line'});
+        node('text',{x:left-10,y:y+4,'text-anchor':'end',class:'axis-label'},format(i*tickStep));
+      }
+      const sorted=[...hours].sort((a,b)=>Date.parse(a.hour)-Date.parse(b.hour));
+      const start=Date.parse(sorted[0].hour),end=Date.parse(sorted.at(-1).hour)+3600000,span=end-start;
+      const width=plotWidth*3600000/span;
+      sorted.forEach(h=>{
+        const value=h[chartMetric],height=(value||0)/max*plotHeight;
+        const rect=node('rect',{x:left+(Date.parse(h.hour)-start)/span*plotWidth+2,y:top+plotHeight-height,width:Math.max(1,width-4),height});
+        const tip=document.createElementNS(ns,'title');tip.textContent=`${h.hour} · ${format(h.requests)} ${t.requests} · ${format(h.errors)} ${t.errors}`;rect.append(tip);
+      });
+      for(let i=0;i<=4;i++){
+        const time=new Date(start+span*i/4),x=left+plotWidth*i/4;
+        node('text',{x,y:226,'text-anchor':i===0?'start':i===4?'end':'middle',class:'axis-label'},time.toISOString().slice(11,16));
+        node('text',{x,y:244,'text-anchor':i===0?'start':i===4?'end':'middle',class:'axis-label'},time.toISOString().slice(5,10));
+      }
+      node('text',{x:10,y:236,class:'axis-caption'},'UTC');
+      $('chart').append(svg);
     }else $('chart').textContent=t.empty;
     $('updated').textContent=current?.updatedAt?`${t.updated}: ${current.updatedAt}${current.from?` · ${t.range}: ${current.from} — ${current.to}`:''}`:'—';
     $('refresh').disabled=busy||Date.now()-lastAttempt<60000;
