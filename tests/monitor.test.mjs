@@ -58,3 +58,13 @@ test('failure categories expose no raw upstream messages',async()=>{
   assert.ok(!JSON.stringify(result).includes('private-token'));
  }
 });
+
+test('monitor rejects redirects without forwarding the analytics token',async()=>{
+ let calls=0;
+ const monitor=createMonitor({clock:()=>date,fetcher:async(url,options)=>{
+  calls++;assert.equal(options.redirect,'manual');
+  return new Response(null,{status:302,headers:{Location:'https://other.example/'}});
+ }});
+ const data=await (await monitor(request(),env,'Lite')).json();
+ assert.equal(calls,1);assert.equal(data.state,'unavailable');assert.equal(data.reason,'upstream_http');
+});

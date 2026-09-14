@@ -54,7 +54,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
       // A configuration fingerprint prevents serving a previous project's cached metrics.
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(key));
       const fingerprint=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
-      const cacheKey=new Request(`${url.origin}/__monitor_cache_v2/${fingerprint}`);
+      const cacheKey=new Request(`${url.origin}/__monitor_cache_v3/${fingerprint}`);
       const cache=globalThis.caches?.default;
       try {
         const hit=await cache?.match(cacheKey);
@@ -70,7 +70,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
         const res=await fetcher('https://api.cloudflare.com/client/v4/graphql',{
           method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
           body:JSON.stringify({query,variables:{account,script,start:new Date(now-86400000).toISOString(),today:end.slice(0,10)+'T00:00:00.000Z',end}}),
-          signal:AbortSignal.timeout(10000),redirect:'error',
+          signal:AbortSignal.timeout(10000),redirect:'manual',
         });
         reason = res.status === 401 || res.status === 403 ? 'authorization' : res.status === 429 ? 'rate_limit' : 'upstream_http';
         if (!res.ok) throw new Error('upstream');
