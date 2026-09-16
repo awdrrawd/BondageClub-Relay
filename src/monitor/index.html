@@ -8,8 +8,9 @@
 <button type="button" id="tab-errors" role="tab" aria-controls="view-panel" aria-selected="false" tabindex="-1" data-view="errors">錯誤</button>
 <button type="button" id="tab-performance" role="tab" aria-controls="view-panel" aria-selected="false" tabindex="-1" data-view="performance">效能</button>
 </div><div id="view-panel" role="tabpanel" aria-labelledby="tab-overview"><section id="cards" aria-label="Metrics"></section>
-<section class="panel" id="chart-panel"><h2 id="chartTitle">最近 24 小時請求量</h2><div id="chart" role="img"></div>
-<details><summary id="tableTitle">每小時數據（UTC）</summary><div class="table-wrap"><table><thead><tr><th id="hourLabel">UTC</th><th id="requestsLabel">請求</th><th id="errorsLabel">錯誤</th></tr></thead><tbody id="rows"></tbody></table></div></details>
+<section class="panel" id="chart-panel"><h2 id="chartTitle">最近 24 小時請求量</h2><p id="chart-help" class="muted"></p><div id="chart" role="group"></div>
+<section id="hour-detail" aria-live="polite" aria-atomic="true"></section>
+<details open><summary id="tableTitle">每小時數據（UTC，最新優先）</summary><div class="table-wrap"><table><thead><tr><th id="hourLabel" scope="col">UTC</th><th id="requestsLabel" scope="col">請求</th><th id="errorsLabel" scope="col">錯誤</th><th id="rateLabel" scope="col">錯誤率</th></tr></thead><tbody id="rows"></tbody></table></div></details>
 </section><section class="panel"><h2 id="insight-title"></h2><div id="insights"></div></section></div><details class="notes"><summary id="notes-label">統計說明與限制</summary><p id="limits" class="muted"></p></details>
 <footer><a href="./monitor.md">設定文件 / Setup (MD)</a><a id="dashboard" href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">Cloudflare 管理台 ↗</a><a id="integration" href="./guide.html">接入／移植說明</a><a href="https://bondageclub-lite.pages.dev/monitor/">Lite</a><a href="https://bondageclub-relay.pages.dev/monitor/">Relay</a><a href="https://developers.cloudflare.com/workers/observability/metrics-and-analytics/">Cloudflare docs</a></footer>
 </main></body></html>

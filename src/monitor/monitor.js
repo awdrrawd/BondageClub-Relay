@@ -1,6 +1,6 @@
 (() => {
   const $=id=>document.getElementById(id);
-  let zh=/^(zh|tw)([-_]|$)/i.test(navigator.language), busy=false, lastAttempt=0, current, view='overview';
+  let zh=/^(zh|tw)([-_]|$)/i.test(navigator.language), busy=false, lastAttempt=0, current, view='overview', selectedHour=null;
   const languages={
     zh:{title:'負載監看',intro:'供維護者查看用量與負載，也開放其他人參考。只讀取彙總數據，不探測遊戲連線。',dashboard:'Cloudflare 管理台 ↗',integration:'接入／移植說明',refresh:'重新整理',chart:'最近 24 小時請求量',table:'每小時數據（UTC）',requests:'請求',errors:'錯誤',loading:'讀取中…',ready:'資料已更新（Cloudflare 統計可能延遲）',disabled:'監看尚未啟用。',not_configured:'管理者尚未完成監看設定。',unavailable:'目前無法取得統計，請稍後重試；這不代表遊戲故障。',no_data:'查詢未回傳資料，請管理者確認 scriptName、資料集或等待統計；不代表用量為 0。',updated:'統計取得時間',range:'查詢範圍',empty:'沒有可顯示的每小時數據',cards:['今日請求（UTC）','24h 請求','24h 執行錯誤','CPU P50（μs）','CPU P99（μs）'],limits:'每 5 分鐘更新，手動更新最短間隔 1 分鐘；背景頁面暫停查詢。數據可能抽樣、延遲，不是帳單或即時在線人數。CPU 是單次執行的百分位數，非累積 CPU／連線延遲。錯誤是 Worker 執行錯誤，非所有 HTTP 錯誤。只公開本站數據；帳號共享額度及剩餘百分比不在此頁推算。'},
     en:{title:'Load monitor',intro:'An operator dashboard for usage and load, also available for public reference. Aggregate metrics only; no game probes.',dashboard:'Cloudflare dashboard ↗',integration:'Integration / reuse guide',refresh:'Refresh',chart:'Requests over the last 24 hours',table:'Hourly data (UTC)',requests:'Requests',errors:'Errors',loading:'Loading…',ready:'Updated (Cloudflare metrics may be delayed)',disabled:'Monitoring is not enabled.',not_configured:'The operator has not completed monitoring setup.',unavailable:'Metrics are temporarily unavailable. This does not indicate a game outage.',no_data:'No data returned. Verify the script name/dataset or wait for metrics; this does not mean zero usage.',updated:'Metrics fetched',range:'Query range',empty:'No hourly data available',cards:['Today’s requests (UTC)','24h requests','24h execution errors','CPU P50 (μs)','CPU P99 (μs)'],limits:'Refreshes every 5 minutes; manual refresh has a 1-minute cooldown. Hidden tabs pause queries. Metrics may be sampled or delayed; these are not billing figures or online-player counts. CPU shows per-execution percentiles, not total CPU or connection latency. Errors are Worker invocation errors, not all HTTP errors. Only this project is exposed; shared account quota and remaining allowance are not estimated here.'},
@@ -60,7 +60,30 @@
       card.append(name,value,note);return card;
     }));
     $('status').dataset.state=busy?'loading':current?.state||'unavailable';
-    const hours=usable&&Array.isArray(current.hours)?current.hours:[];
+    const hours=usable&&Array.isArray(current.hours)?[...current.hours].sort((a,b)=>Date.parse(b.hour)-Date.parse(a.hour)):[];
+    const errorRate=row=>typeof row?.requests==='number'&&row.requests>0&&typeof row.errors==='number'?format(row.errors/row.requests*100)+'%':'—';
+    const hourLabel=hour=>hour.slice(0,16).replace('T',' ');
+    if(!hours.some(h=>h.hour===selectedHour))selectedHour=hours[0]?.hour||null;
+    $('tableTitle').textContent=zh?'每小時數據（UTC，最新優先）':'Hourly data (UTC, newest first)';
+    $('rateLabel').textContent=zh?'執行錯誤率':'Invocation error rate';
+    $('chart-help').textContent=zh?'點選柱狀圖或表格時段查看明細，也可用 Tab 與 Enter 操作。圖表由左至右為時間先後；表格最新優先。未回傳的時段不視為零，首尾時段可能不足一小時。':'Select a bar or table hour for details; Tab and Enter also work. Chart runs chronologically; table shows newest first. Missing hours are not assumed zero; boundary hours may be partial.';
+    function showHour(hour){
+      selectedHour=hour;
+      const row=hours.find(h=>h.hour===hour);
+      $('hour-detail').replaceChildren();
+      if(!row)return;
+      const title=document.createElement('h3');
+      const start=Math.max(Date.parse(row.hour),Date.parse(data.from)||Date.parse(row.hour));
+      const end=Math.min(Date.parse(row.hour)+3600000,Date.parse(data.to)||Date.parse(row.hour)+3600000);
+      title.textContent=`${hourLabel(new Date(start).toISOString())} – ${hourLabel(new Date(end).toISOString())} UTC`;
+      const values=document.createElement('p');values.textContent=`${t.requests}: ${format(row.requests)} · ${t.errors}: ${format(row.errors)} · ${zh?'執行錯誤率':'Invocation error rate'}: ${errorRate(row)}`;
+      $('hour-detail').append(title,values);
+      document.querySelectorAll('[data-hour]').forEach(el=>{
+        const active=el.dataset.hour===hour;
+        if(el.tagName.toLowerCase()==='tr')el.classList.toggle('selected',active);
+        else el.setAttribute('aria-pressed',String(active));
+      });
+    }
     $('insight-title').textContent=zh?'重點與錯誤說明':'Highlights & error guidance';
     const peak=hours.filter(h=>typeof h.requests==='number').reduce((best,h)=>!best||h.requests>best.requests?h:best,null);
     const insights=[
@@ -71,18 +94,26 @@
       [zh?'如何判讀錯誤':'Reading errors',zh?'執行錯誤不等於 HTTP 4xx/5xx 或遊戲斷線。這裡不提供原始錯誤訊息；請到 Cloudflare 管理台的執行日誌查看例外與 stack。':'Invocation errors are not HTTP 4xx/5xx or game disconnects. Raw errors are not exposed here; inspect exceptions and stacks in Cloudflare logs.'],
       [zh?'平均值範圍':'Average scope',zh?'以完整 7／30 日為分母，含無流量日與部署前的日期，不代表活躍日平均；API 無資料時顯示未知。':'Uses full 7/30-day denominators, including zero-traffic and pre-deployment days, not active days. No API data means unknown.'],
     ];
-    const shownInsights=view==='overview'?[insights[0]]:view==='history'?[insights[1],insights[3]]:view==='errors'?[insights[2]]:[
+    const worst=hours.filter(h=>typeof h.errors==='number'&&h.errors>0).reduce((best,h)=>!best||h.errors>best.errors?h:best,null);
+    insights.push([zh?'錯誤最多的時段（UTC）':'Hour with most errors (UTC)',worst?`${hourLabel(worst.hour)} · ${format(worst.errors)} / ${format(worst.requests)} · ${errorRate(worst)}`:zh?'目前沒有已回報的錯誤時段。':'No reported error hours.']);
+    insights.push([zh?'目前能確認的原因範圍':'What these metrics can establish',zh?'錯誤率直接以 Cloudflare errors ÷ requests 計算，並非遊戲失敗率。一般 Client Disconnected 不計入執行錯誤；已捕捉後回傳的 HTTP 502 也不等於未捕捉例外。現有資料沒有執行狀態分類或例外日誌，不能判定根因。請在管理台 Metrics → Errors 查看分類，再對照上述時段的日誌。':'Rate is Cloudflare errors ÷ requests, not game failure rate. Client Disconnected is not an invocation error; a caught exception returning HTTP 502 is not an uncaught exception. This API has no invocation status breakdown or exception logs, so it cannot establish root cause. Check Metrics → Errors and correlate logs with the hours above.']);
+    const shownInsights=view==='overview'?[insights[0],insights[4]]:view==='history'?[insights[1],insights[3]]:view==='errors'?[insights[4],insights[5],insights[2]]:[
       [zh?'CPU P50 / P99':'CPU P50 / P99',zh?'P50 反映典型執行成本，P99 反映較慢的尾端執行；兩者皆為最近 24 小時、單位 μs。':'P50 describes typical execution cost; P99 describes slower tail invocations. Both cover the last 24 hours in μs.'],
       [zh?'不是連線速度':'Not connection speed',zh?'CPU 不包含等待網路的時間，不能用來判斷遊戲延遲或可用性。目前未收集 CPU 時序資料，因此不繪製推估趨勢。':'CPU excludes network waits and does not measure game latency or availability. No CPU time series is collected, so no estimated trend is drawn.'],
     ];
     $('insights').replaceChildren(...shownInsights.map(([title,text])=>{const item=document.createElement('article'),heading=document.createElement('h3'),body=document.createElement('p');heading.textContent=title;body.textContent=text;item.append(heading,body);return item}));
-    $('rows').replaceChildren(...hours.map(row=>{const tr=document.createElement('tr');for(const value of [row.hour,format(row.requests),format(row.errors)]){const td=document.createElement('td');td.textContent=value;tr.append(td)}return tr;}));
+    $('rows').replaceChildren(...hours.map(row=>{
+      const tr=document.createElement('tr');tr.dataset.hour=row.hour;
+      const time=document.createElement('td'),button=document.createElement('button');
+      button.type='button';button.className='hour-button';button.dataset.hour=row.hour;button.textContent=hourLabel(row.hour);button.addEventListener('click',()=>showHour(row.hour));time.append(button);tr.append(time);
+      for(const value of [format(row.requests),format(row.errors),errorRate(row)]){const td=document.createElement('td');td.textContent=value;tr.append(td)}return tr;
+    }));
     const chartMetric=view==='errors'?'errors':'requests';
     if(view==='errors') $('chartTitle').textContent=zh?'最近 24 小時執行錯誤':'Invocation errors over the last 24 hours';
     $('chart').replaceChildren();$('chart').setAttribute('aria-label',$('chartTitle').textContent);
     if(hours.length){
       const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
-      svg.setAttribute('viewBox','0 0 720 260');svg.setAttribute('aria-hidden','true');
+      svg.setAttribute('viewBox','0 0 720 260');svg.setAttribute('role','group');svg.setAttribute('aria-label',$('chartTitle').textContent);
       const node=(tag,attrs,text)=>{const el=document.createElementNS(ns,tag);for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));if(text!==undefined)el.textContent=text;svg.append(el);return el};
       const left=88,top=30,plotWidth=612,plotHeight=175;
       const peak=Math.max(0,...hours.map(h=>h[chartMetric]||0));
@@ -99,8 +130,12 @@
       const width=plotWidth*3600000/span;
       sorted.forEach(h=>{
         const value=h[chartMetric],height=(value||0)/max*plotHeight;
-        const rect=node('rect',{x:left+(Date.parse(h.hour)-start)/span*plotWidth+2,y:top+plotHeight-height,width:Math.max(1,width-4),height});
-        const tip=document.createElementNS(ns,'title');tip.textContent=`${h.hour} · ${format(h.requests)} ${t.requests} · ${format(h.errors)} ${t.errors}`;rect.append(tip);
+        const x=left+(Date.parse(h.hour)-start)/span*plotWidth+2;
+        node('rect',{x,y:top+plotHeight-height,width:Math.max(1,width-4),height,class:'bar','aria-hidden':'true'});
+        const rect=node('rect',{x,y:top,width:Math.max(1,width-4),height:plotHeight,class:'bar-target',role:'button',tabindex:0,'data-hour':h.hour,'aria-label':`${hourLabel(h.hour)} UTC · ${format(h.requests)} ${t.requests} · ${format(h.errors)} ${t.errors} · ${errorRate(h)}`});
+        rect.addEventListener('click',()=>showHour(h.hour));
+        rect.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showHour(h.hour)}});
+        const tip=document.createElementNS(ns,'title');tip.textContent=rect.getAttribute('aria-label');rect.append(tip);
       });
       for(let i=0;i<=4;i++){
         const time=new Date(start+span*i/4),x=left+plotWidth*i/4;
@@ -110,6 +145,7 @@
       node('text',{x:10,y:236,class:'axis-caption'},'UTC');
       $('chart').append(svg);
     }else $('chart').textContent=t.empty;
+    showHour(selectedHour);
     $('updated').textContent=current?.updatedAt?`${t.updated}: ${current.updatedAt}${current.from?` · ${t.range}: ${current.from} — ${current.to}`:''}`:'—';
     $('refresh').disabled=busy||Date.now()-lastAttempt<60000;
   }
