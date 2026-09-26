@@ -56,3 +56,23 @@ test('selection survives language and view changes; unavailable data leaves no s
     assert.equal(result.ids.rows.children.length,0);
   }
 });
+
+test('hour tiles distinguish errors, zero, missing buckets and missing fields',async()=>{
+  const {ids}=await render({...data,updatedAt:new Date(Date.now()-660000).toISOString()});
+  const tiles=ids['activity-grid'].children;
+  assert.equal(tiles.length,25); // A rolling day can overlap 25 UTC hour buckets.
+  assert.equal(tiles[0].dataset.state,'missing');
+  assert.equal(tiles[0].disabled,true);
+  assert.equal(tiles[22].dataset.state,'errors');
+  assert.equal(tiles[23].dataset.state,'missing'); // Requests present, errors unknown.
+  assert.equal(tiles[24].dataset.state,'zero');
+  tiles[22].events.click();
+  assert.match(ids['hour-detail'].children[1].textContent,/20.*5.*25%/);
+  assert.equal(tiles[22].attrs['aria-pressed'],'true');
+  assert.equal(ids.freshness.dataset.state,'stale');
+  const clear=await render({...data,hours:[{hour:hours[0].hour,requests:20,errors:0}]});
+  assert.equal(clear.ids['activity-grid'].children[22].dataset.state,'clear');
+  const disabled=await render({state:'disabled'});
+  assert.equal(disabled.ids['activity-grid'].children.length,0);
+  assert.equal(disabled.ids.freshness.dataset.state,'unknown');
+});

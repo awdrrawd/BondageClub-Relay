@@ -124,3 +124,15 @@ Weekly/monthly cards show requests per day over the previous 7/30 complete UTC d
 [Umami](https://github.com/umami-software/umami)（查閱時約 38.8k stars）、
 [Plausible](https://github.com/plausible/analytics)（約 29.1k）、
 [Tremor](https://github.com/tremorlabs/tremor)（約 3.6k）。星數查閱日期：2026-09-14。
+
+## 時段方格與監測參考
+
+Relay 的監看頁與入口頁共用 `src/site.css`，另由 `monitor.css` 定義圖表、方格與表格。移植時需同時複製 `site.css` 到輸出根目錄。語言偏好與入口頁共用；Lite 倉庫需另行同步介面。
+
+- 方格參考 [Uptime Kuma HeartbeatBar](https://github.com/louislam/uptime-kuma/blob/master/src/components/HeartbeatBar.vue) 的時段狀態呈現，自行實作，未複製元件程式碼。
+- 查詢設計參考 [Cloudflare Prometheus exporter](https://github.com/cloudflare/cloudflare-prometheus-exporter) 對彙總查詢、快取與統計傳播延遲的區分。沿用本站固定專案 GraphQL、5 分鐘快取與合併請求，不新增 Prometheus、Durable Objects 或權限。
+- 指標語意依 [Cloudflare metrics 文件](https://developers.cloudflare.com/workers/observability/metrics-and-analytics/)：這是請求及執行錯誤統計，不是主動健康檢查或遊戲在線率。
+
+每格對應查詢範圍內一個 UTC 小時；滾動 24 小時可能跨 25 格。綠色表示有請求且回報零執行錯誤，黃色表示有執行錯誤，灰色表示明確回報零請求，斜線表示時段或欄位缺失。缺少整個時段時不提供明細，已有部分欄位時仍可查看，未知值顯示 —。首尾格可能不是完整小時。
+
+資料取得時間與資料新鮮度分開顯示；成功快照超過 10 分鐘會標為過期。此門檻僅供閱讀提示，不代表 Cloudflare 的延遲承諾。取得時間不是最後一筆遊戲流量時間。重新整理失敗會清空舊統計，避免被誤認為即時資料。

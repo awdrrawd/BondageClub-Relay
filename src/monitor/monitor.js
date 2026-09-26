@@ -1,6 +1,16 @@
 (() => {
   const $=id=>document.getElementById(id);
   let zh=/^(zh|tw)([-_]|$)/i.test(navigator.language), busy=false, lastAttempt=0, current, view='overview', selectedHour=null;
+  try { const saved=localStorage.getItem('bc-relay-site-language'); if(saved==='zh'||saved==='en')zh=saved==='zh'; } catch { /* Browser language remains the fallback. */ }
+  function renderFreshness(){
+    const age=Date.now()-Date.parse(current?.updatedAt);
+    const known=['ready','no_data'].includes(current?.state)&&Number.isFinite(age)&&age>=0;
+    $('freshness').dataset.state=known&&age>600000?'stale':'unknown';
+    $('freshness').textContent=known
+      ? (zh?`取得於 ${Math.floor(age/60000)} 分鐘前 · 統計可能延遲`:`Fetched ${Math.floor(age/60000)} min ago · metrics may lag`)
+        +(age>600000?(zh?' · 資料已過期':' · stale snapshot'):'')
+      : (zh?'每 5 分鐘更新 · 背景頁暫停':'Refresh every 5 min · paused in background');
+  }
   const languages={
     zh:{title:'負載監看',intro:'供維護者查看用量與負載，也開放其他人參考。只讀取彙總數據，不探測遊戲連線。',dashboard:'Cloudflare 管理台 ↗',integration:'接入／移植說明',refresh:'重新整理',chart:'最近 24 小時請求量',table:'每小時數據（UTC）',requests:'請求',errors:'錯誤',loading:'讀取中…',ready:'資料已更新（Cloudflare 統計可能延遲）',disabled:'監看尚未啟用。',not_configured:'管理者尚未完成監看設定。',unavailable:'目前無法取得統計，請稍後重試；這不代表遊戲故障。',no_data:'查詢未回傳資料，請管理者確認 scriptName、資料集或等待統計；不代表用量為 0。',updated:'統計取得時間',range:'查詢範圍',empty:'沒有可顯示的每小時數據',cards:['今日請求（UTC）','24h 請求','24h 執行錯誤','CPU P50（μs）','CPU P99（μs）'],limits:'每 5 分鐘更新，手動更新最短間隔 1 分鐘；背景頁面暫停查詢。數據可能抽樣、延遲，不是帳單或即時在線人數。CPU 是單次執行的百分位數，非累積 CPU／連線延遲。錯誤是 Worker 執行錯誤，非所有 HTTP 錯誤。只公開本站數據；帳號共享額度及剩餘百分比不在此頁推算。'},
     en:{title:'Load monitor',intro:'An operator dashboard for usage and load, also available for public reference. Aggregate metrics only; no game probes.',dashboard:'Cloudflare dashboard ↗',integration:'Integration / reuse guide',refresh:'Refresh',chart:'Requests over the last 24 hours',table:'Hourly data (UTC)',requests:'Requests',errors:'Errors',loading:'Loading…',ready:'Updated (Cloudflare metrics may be delayed)',disabled:'Monitoring is not enabled.',not_configured:'The operator has not completed monitoring setup.',unavailable:'Metrics are temporarily unavailable. This does not indicate a game outage.',no_data:'No data returned. Verify the script name/dataset or wait for metrics; this does not mean zero usage.',updated:'Metrics fetched',range:'Query range',empty:'No hourly data available',cards:['Today’s requests (UTC)','24h requests','24h execution errors','CPU P50 (μs)','CPU P99 (μs)'],limits:'Refreshes every 5 minutes; manual refresh has a 1-minute cooldown. Hidden tabs pause queries. Metrics may be sampled or delayed; these are not billing figures or online-player counts. CPU shows per-execution percentiles, not total CPU or connection latency. Errors are Worker invocation errors, not all HTTP errors. Only this project is exposed; shared account quota and remaining allowance are not estimated here.'},
@@ -35,6 +45,9 @@
     $('notes-label').textContent=zh?'統計說明與限制':'Methodology & limitations';
     $('chart-panel').hidden=view==='history'||view==='performance';
     const t=languages[zh?'zh':'en'];document.documentElement.lang=zh?'zh-Hant':'en';
+    document.title=zh?'BC Relay · 負載監看':'BC Relay · Load monitor';
+    $('home-link').textContent=zh?'遊戲入口':'Game entries';
+    $('monitor-link').textContent=t.title;
     for(const [id,key] of Object.entries({dashboard:'dashboard',integration:'integration',title:'title',intro:'intro',refresh:'refresh',chartTitle:'chart',tableTitle:'table',requestsLabel:'requests',errorsLabel:'errors',limits:'limits'})) $(id).textContent=t[key];
     $('language').textContent=zh?'English':'中文';$('project').textContent=current?.project||'—';
     $('status').textContent=busy?t.loading:t[current?.state]||t.unavailable;
@@ -145,7 +158,28 @@
       node('text',{x:10,y:236,class:'axis-caption'},'UTC');
       $('chart').append(svg);
     }else $('chart').textContent=t.empty;
+    // Hourly aggregates, not uptime heartbeats: missing buckets stay unknown.
+    $('activity-title').textContent=zh?'每小時執行狀態':'Hourly invocation status';
+    $('activity-help').textContent=zh?'每格一個 UTC 小時，由舊到新；數字為小時。點選查看明細，首尾可能不足一小時。':'One UTC hour per tile, oldest to newest; numbers show the hour. Select for details; boundary hours may be partial.';
+    const labels=zh?{clear:'無執行錯誤',errors:'有執行錯誤',zero:'零請求',missing:'資料缺失'}:{clear:'No invocation errors',errors:'Invocation errors',zero:'Zero requests',missing:'Missing data'};
+    $('activity-legend').textContent=zh?'綠：無執行錯誤 · 黃：有執行錯誤 · 灰：零請求 · 斜線：資料缺失。這不是在線率或遊戲健康檢查。':'Green: no invocation errors · Amber: errors · Gray: zero requests · Hatched: missing data. Not uptime or game health.';
+    const grid=$('activity-grid');grid.replaceChildren();grid.setAttribute('aria-label',$('activity-title').textContent);
+    const from=Date.parse(data.from),to=Date.parse(data.to);
+    if(Number.isFinite(from)&&Number.isFinite(to)&&to>from&&to-from<=86400000){
+      const buckets=new Map(hours.map(row=>[Date.parse(row.hour),row]));
+      for(let time=Math.floor(from/3600000)*3600000;time<to;time+=3600000){
+        const row=buckets.get(time),hour=new Date(time).toISOString();
+        const known=Number.isFinite(row?.requests)&&Number.isFinite(row?.errors)&&row.requests>=0&&row.errors>=0;
+        const state=!known?'missing':row.errors>0?'errors':row.requests===0?'zero':'clear';
+        const tile=document.createElement('button');tile.type='button';tile.className='activity-cell';tile.dataset.state=state;
+        tile.textContent=hour.slice(11,13);tile.title=hourLabel(hour)+' UTC · '+labels[state];
+        tile.setAttribute('aria-label',tile.title);tile.disabled=!row;
+        if(row){tile.dataset.hour=row.hour;tile.addEventListener('click',()=>showHour(row.hour));}
+        grid.append(tile);
+      }
+    }else grid.textContent=t.empty;
     showHour(selectedHour);
+    renderFreshness();
     $('updated').textContent=current?.updatedAt?`${t.updated}: ${current.updatedAt}${current.from?` · ${t.range}: ${current.from} — ${current.to}`:''}`:'—';
     $('refresh').disabled=busy||Date.now()-lastAttempt<60000;
   }
@@ -156,6 +190,7 @@
     catch{current={state:'unavailable'};}
     finally{busy=false;render();setTimeout(()=>{$('refresh').disabled=busy},60000);}
   }
-  $('refresh').addEventListener('click',refresh);$('language').addEventListener('click',()=>{zh=!zh;render()});
+  $('refresh').addEventListener('click',refresh);$('language').addEventListener('click',()=>{zh=!zh;try{localStorage.setItem('bc-relay-site-language',zh?'zh':'en')}catch{}render()});
+  setInterval(()=>{if(!document.hidden)renderFreshness()},60000);
   setInterval(refresh,300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastAttempt>=300000)refresh()});refresh();
 })();
