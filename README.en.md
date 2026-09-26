@@ -9,6 +9,17 @@ An unofficial project for learning and connection experiments: a userscript and 
 
 [Installation and bilingual guide](https://bondageclub-relay.pages.dev/) · [中文](README.md)
 
+## Game gateway
+
+The dark homepage supports English/Chinese switching and mobile layouts, and always keeps the [official directory](https://www.bondageprojects.com/club_game/) link.
+
+- Discover official channels automatically; fall back to a recent successful list, then site presets.
+- Site presets and browser custom entries support `{version}`. Known older URLs can follow official HTTP or HTML redirects without guessing a future version.
+- Show server game-page and local asset checks separately. Passing does not guarantee login or game connectivity.
+- [BC Lite](https://bondageclub-lite.pages.dev/) is a separate text chat client requiring no loader, without character rendering, wardrobe or full plugin support.
+
+See [entry design](docs/game-entries.md) for fallback order, caching and allowlists, and [UI design](docs/ui-design.md) for layout and public references (Chinese).
+
 ## Install with Tampermonkey
 
 1. Visit the [official Tampermonkey website](https://www.tampermonkey.net/), choose your browser and install through its official extension store.

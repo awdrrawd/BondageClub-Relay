@@ -9,6 +9,17 @@
 
 [安裝與中英說明](https://bondageclub-relay.pages.dev/) · [English](README.en.md)
 
+## 遊戲入口
+
+首頁採用深色控制台，支援中英文切換與手機版，固定保留 [官方入口](https://www.bondageprojects.com/club_game/)。
+
+- 自動取得官方通道；失敗時使用有效的成功清單，再退回站方備援。
+- 站方設定與瀏覽器自訂入口都支援 `{version}`；已知舊網址可追蹤官方 HTTP／HTML 導向，不猜下一版。
+- 分別顯示站方遊戲頁與本機素材檢查；通過不保證登入或遊戲連線。
+- [BC Lite](https://bondageclub-lite.pages.dev/) 提供獨立文字聊天介面，不需 Loader；不提供人物繪圖、衣櫃與完整插件功能。
+
+備援順序、快取、白名單與維護方式見 [入口設計](docs/game-entries.md)；版面與公開 UI 參考見 [介面設計](docs/ui-design.md)。
+
 ## 使用 Tampermonkey 安裝
 
 1. 前往 [Tampermonkey 官方網站](https://www.tampermonkey.net/)，選擇自己的瀏覽器，從對應的官方擴充功能商店安裝。

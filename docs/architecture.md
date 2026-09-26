@@ -18,11 +18,17 @@ C 模式不只握手：登入與後續遊戲通訊都經 Cloudflare，不會登�
 | --- | --- |
 | src/client.user.js | 攔截 io、A/B/C 模式、連線提示與登入輪詢 |
 | src/worker.js | 產生安裝脚本、驗證握手、轉送固定正式／測試服 |
+| src/game-config.js | 入口模板、歷史起點、版本格式與檢查白名單 |
+| src/_game-links.js | 官方清單解析、快取與遊戲頁導向檢查 |
+| src/game-links.js | 首頁清單、瀏覽器備援與本機素材檢查 |
+| src/site-i18n.js | 首頁中英文文案與語言偏好 |
+| src/index.html、src/site.css | 遊戲入口、Relay 安裝與 Lite 說明 |
 | scripts/build-relay.mjs | 產生首頁、路由、標頭與 dist-relay |
 | tests/relay.test.mjs | 網址、安裝防護、路由與登入輪詢測試 |
+| tests/game-links.test.mjs | 入口解析、導向安全、備援順序與首頁狀態測試 |
 | docs/connection-test.md | 部署設定、安裝與人工驗證 |
 
-保留 build:relay 與 dist-relay 名稱，現有 Cloudflare 設定無須修改。build 是同一流程的別名。來源下載、固定 SHA、素材探測、鏡像入口及 Service Worker 已移除；舊方案仍可從 Git 歷史查閱。
+保留 build:relay 與 dist-relay 名稱，現有 Cloudflare 設定無須修改。build 是同一流程的別名。完整來源下載、固定 SHA、鏡像入口及 Service Worker 已移除；舊方案仍可從 Git 歷史查閱。首頁另有輕量的官方入口解析、備援與 HTML／圖示檢查，見 [快速入口設計](game-entries.md)。
 
 ## 遊戲更新是否要跟著改插件？
 
@@ -31,7 +37,7 @@ C 模式不只握手：登入與後續遊戲通訊都經 Cloudflare，不會登�
 | 官方改動 | 可能受影響的位置 |
 | --- | --- |
 | 服裝、動作、翻譯、一般介面 | 通常不需改動，仍建議登入及聊天驗證 |
-| 官方網域或版本路徑格式 | client 的 include／路徑檢查、Worker Origin 白名單 |
+| 官方網域或版本路徑格式 | game-config 解析與檢查白名單、client 的 include／路徑檢查、Worker Origin 白名單 |
 | 正式／測試服位址 | client 環境辨識與 Worker 固定上游，兩邊同步 |
 | 不再使用 window.io(...) 連線 | client 攔截位置 |
 | Socket.IO／Engine.IO 協議 | Worker 目前限制 EIO=4、WebSocket 及允許的 query |

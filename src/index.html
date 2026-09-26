@@ -1,13 +1,79 @@
 <!doctype html>
 <html lang="zh-Hant">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BC Relay · 使用說明 / Guide</title><link rel="stylesheet" href="/site.css"></head>
-<body><main>
-<nav aria-label="Language"><a href="#zh">中文</a> · <a href="#en" lang="en">English</a></nav>
-<p class="eyebrow">BONDAGE CLUB · CONNECTION RELAY</p>
-<h1>BC Relay</h1>
-<p>官方遊戲，另一條連線路徑。<br><span lang="en">The official game, with an alternative connection route.</span></p>
-<a class="install" href="/install.user.js">安裝／更新 Loader · Install / Update →</a>
-<section id="zh" class="guide" lang="zh-Hant" aria-labelledby="zh-title">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="BC Relay：官方遊戲入口、通道狀態檢查與替代連線路徑。">
+<meta name="theme-color" content="#0c1015">
+<title>BC Relay · 遊戲入口</title><link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<a class="skip-link" href="#entries" data-i18n="skip">跳到遊戲入口</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="/" aria-label="BC Relay home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>BC <b>Relay</b></span><span class="brand-tag">GATEWAY</span></a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#entries" data-i18n="navEntries">遊戲入口</a><a href="#setup" data-i18n="navSetup">開始使用</a><a href="#help" data-i18n="navHelp">使用說明</a>
+      <a href="/monitor/" class="monitor-nav"><span class="activity-icon" aria-hidden="true">⌁</span><span data-i18n="navMonitor">負載監看</span></a>
+    </nav>
+    <div class="language-switch" role="group" aria-label="Language"><button type="button" data-set-language="zh" aria-pressed="true" lang="zh-Hant">中</button><button type="button" data-set-language="en" aria-pressed="false" lang="en">EN</button></div>
+  </div>
+</header>
+<main class="app-shell">
+  <section class="page-intro" aria-labelledby="page-title">
+    <div><p class="eyebrow" data-i18n="eyebrow">BONDAGE CLUB / CONNECTION GATEWAY</p><h1 id="page-title" data-i18n="heroTitle">你的 BC 連線入口。</h1><p class="intro-copy" data-i18n="heroDescription">先確認通道，再開始遊戲。官方入口、連線檢查與 Relay 設定，集中在這裡。</p></div>
+    <a class="button button-secondary official-button" href="https://www.bondageprojects.com/club_game/" rel="noreferrer"><span data-i18n="official">開啟官方入口</span><span aria-hidden="true">↗</span></a>
+  </section>
+  <div class="overview" aria-label="Entry overview">
+    <div class="overview-item"><span class="overview-icon" aria-hidden="true">⌘</span><div><span class="overview-label" data-i18n="channelCount">已找到入口</span><strong id="entry-count">—</strong></div></div>
+    <div class="overview-item"><span class="overview-icon check-icon" aria-hidden="true">✓</span><div><span class="overview-label" data-i18n="readyCount">雙重檢查通過</span><strong id="ready-count">—</strong></div></div>
+    <div class="overview-item"><span class="overview-icon" aria-hidden="true">↗</span><div><span class="overview-label" data-i18n="versionLabel">清單版本</span><strong id="directory-version">—</strong></div></div>
+  </div>
+  <div class="dashboard-layout">
+    <section id="entries" class="entry-section" aria-labelledby="quick-start-title">
+      <div class="section-heading"><div><p class="section-number">01 / PLAY</p><h2 id="quick-start-title" data-i18n="entriesTitle">選擇遊戲入口</h2></div><div class="entry-actions"><button id="game-links-retry" class="button button-quiet" type="button"><span aria-hidden="true">↻</span><span data-i18n="reload">更新清單</span></button><button id="game-links-check" class="button button-secondary" type="button" disabled><span class="check-symbol" aria-hidden="true">◎</span><span id="check-action-label" data-i18n="check">重新檢查</span></button></div></div>
+      <p class="section-description" data-i18n="entriesDescription">遊戲仍由官方提供，選擇一個通道進入。</p>
+      <div id="game-links" class="game-links" aria-busy="true"><div class="loading-placeholder"><span class="loading-ring" aria-hidden="true"></span><span data-i18n="loading">正在讀取官方通道…</span></div></div>
+      <div class="source-line"><span class="source-dot" aria-hidden="true"></span><p id="game-links-status" role="status" aria-live="polite"></p></div>
+      <noscript><p class="notice" data-i18n="noScript">啟用 JavaScript 可顯示通道與檢查結果，也可直接開啟官方入口。</p></noscript>
+      <details class="check-explainer"><summary data-i18n="checkGuide">如何判讀檢查結果？</summary><p data-i18n="checkExplanation">「遊戲頁」由 Relay 站檢查；「本機素材」由你的瀏覽器載入小型遊戲圖示。兩者都通過，仍不代表登入或遊戲連線一定正常。</p><p data-i18n="cacheExplanation">清單最多快取 5 分鐘，站方檢查最多快取 60 秒；備援清單最多保留 7 天。更新清單不會略過快取。</p></details>
+    </section>
+    <aside id="setup" class="setup-column" aria-labelledby="setup-title">
+      <section class="setup-card">
+        <div class="setup-heading"><span class="section-number">02 / CONNECT</span><span class="neutral-badge" data-i18n="optional">選用</span></div>
+        <h2 id="setup-title" data-i18n="setupTitle">第一次使用 Relay？</h2><p class="muted" data-i18n="setupDescription">需要替代連線路徑時，再安裝 Loader。</p>
+        <ol class="setup-steps">
+          <li><span class="step-number" aria-hidden="true">1</span><div><a href="https://www.tampermonkey.net/" rel="noreferrer"><span data-i18n="step1Title">安裝 Tampermonkey</span> ↗</a><p data-i18n="step1Body">準備使用者指令碼管理器。</p></div></li>
+          <li><span class="step-number" aria-hidden="true">2</span><div><strong data-i18n="step2Title">安裝 Relay Loader</strong><p data-i18n="step2Body">使用本站安裝連結，保留一份啟用的插件。</p></div></li>
+          <li><span class="step-number" aria-hidden="true">3</span><div><strong data-i18n="step3Title">在遊戲內選擇模式</strong><p data-i18n="step3Body">開啟右下角氣球，選擇模式並套用。</p></div></li>
+        </ol>
+        <a class="button button-primary install" href="/install.user.js"><span aria-hidden="true">↓</span><span data-i18n="install">安裝／更新 Loader</span></a>
+        <p class="setup-footnote" data-i18n="nativeHint">使用原版直連可直接選擇遊戲入口。</p>
+      </section>
+      <section class="modes-card" aria-labelledby="modes-title"><h3 id="modes-title" data-i18n="modesTitle">三種連線路徑</h3>
+        <div class="mode-row"><span class="mode-letter">A</span><div><strong data-i18n="modeA">原版直連</strong><p data-i18n="modeADesc">預設，使用官方連線設定。</p></div></div>
+        <div class="mode-row"><span class="mode-letter">B</span><div><strong data-i18n="modeB">WebSocket 直連</strong><p data-i18n="modeBDesc">直接連到官方伺服器。</p></div></div>
+        <div class="mode-row"><span class="mode-letter relay-mode">C</span><div><strong data-i18n="modeC">Cloudflare 中繼</strong><p data-i18n="modeCDesc">遊戲通訊經過 Relay 站。</p></div></div>
+        <p class="setup-footnote" data-i18n="modeNote">切換模式會重新載入並中斷目前連線。</p>
+      </section>
+    </aside>
+  </div>
+  <section class="lite-card" aria-labelledby="lite-title">
+    <div><p class="section-number">03 / TEXT CLIENT</p><h2 id="lite-title" data-i18n="liteTitle">只想輕量聊天？試試 BC Lite。</h2><p data-i18n="liteDescription">非官方文字客戶端，可搜尋與加入房間、聊天、私訊及查看好友。不載入人物繪圖或完整遊戲引擎，也不提供衣櫃與完整插件功能。</p><details class="check-explainer"><summary data-i18n="liteDetails">Lite 與 Relay 有什麼不同？</summary><p data-i18n="liteDifference">Relay 在官方遊戲內調整連線路徑；Lite 是獨立的文字介面，不需要安裝 Relay Loader。登入與遊戲流量經過 Lite 部署站的中繼；聊天紀錄預設保存在本機，登出不會刪除已儲存的紀錄。</p><a class="text-link" href="https://github.com/awdrrawd/BondageClub-Lite" data-i18n="liteSource">查看 Lite 原始碼與說明 ↗</a></details></div>
+    <a class="button button-secondary" href="https://bondageclub-lite.pages.dev/" rel="noreferrer"><span data-i18n="liteOpen">開啟 BC Lite</span><span aria-hidden="true">↗</span></a>
+  </section>
+  <details id="advanced" class="advanced-panel">
+    <summary><span class="settings-symbol" aria-hidden="true">＋</span><span><strong data-i18n="advancedTitle">自訂與備援入口</strong><span class="summary-description" data-i18n="advancedSummary">儲存常用入口，或從舊版網址追蹤官方導向。</span></span><span class="summary-arrow" aria-hidden="true">⌄</span></summary>
+    <form id="game-links-settings">
+      <p class="settings-note" data-i18n="settingsExplanation">每行填入「名稱 | HTTPS 網址」。使用 {version} 套用偵測版本，或填寫已知舊入口；確認官方導向後，直連會更新到目的地。</p>
+      <label for="game-links-input" data-i18n="entryLabel">入口網址</label><textarea id="game-links-input" rows="5" spellcheck="false" aria-describedby="entry-input-hint"></textarea><p id="entry-input-hint" class="field-hint" data-i18n="entryHint">例如：Asia | https://www.bondage-asia.com/club/{version}/</p>
+      <div class="version-field"><label for="game-version-input"><span data-i18n="versionInput">備援版本</span><span class="field-hint" data-i18n="optionalField">選填，無法確認官方版本時使用</span></label><input id="game-version-input" type="text" placeholder="R132" maxlength="24" spellcheck="false" autocomplete="off"></div>
+      <div class="form-actions"><button class="button button-primary" type="submit" data-i18n="save">儲存並檢查</button><button id="game-settings-reset" class="button button-secondary" type="button" data-i18n="reset">恢復站方預設</button><span class="field-hint" data-i18n="localOnly">僅儲存於此瀏覽器</span></div><p id="game-settings-status" class="form-feedback" role="status"></p>
+    </form>
+  </details>
+  <section id="help" class="help-section" aria-labelledby="help-title">
+    <div class="help-heading"><div><h2 id="help-title" data-i18n="helpTitle">需要更多協助？</h2><p class="muted" data-i18n="helpDescription">安裝步驟、更新方式與連線排錯。</p></div><a class="text-link" href="/monitor/"><span data-i18n="monitorLink">查看 Relay 負載</span> ↗</a></div>
+    <details class="help-panel"><summary><span data-i18n="fullGuide">使用說明與服務限制</span><span class="summary-arrow" aria-hidden="true">＋</span></summary><div class="guide-content">
+<section id="zh" class="guide" data-language="zh" lang="zh-Hant" aria-labelledby="zh-title">
 <h2 id="zh-title">使用說明</h2>
 <p>這是非官方、供學習與連線實驗使用的專案。官方頁面仍負責遊戲程式、圖片及音樂；插件只調整連線路徑，不是完整鏡像，也不能讓原本無法載入的官方頁面變得可達。</p>
 <h3>安裝與開始</h3>
@@ -22,7 +88,7 @@
 <p>本專案僅供學習、研究與連線測試，不保證穩定性、可用性、速度或持續提供服務。免費額度用盡、平台限制、維護或上游故障都可能造成限流、中斷或停止服務；維護者不承諾加購額度、恢復期限或補償，亦不對因此造成的使用影響或損失負責。請自行評估使用風險。</p>
 <p>請只使用自己部署或信任的中繼。安裝頁不要求帳密，程式不記錄登入與聊天內容，但 C 模式的登入及遊戲資料會流經中繼服務。自架者應自行管理平台帳號的額度及費用。</p>
 </section>
-<section id="en" class="guide" lang="en" aria-labelledby="en-title">
+<section id="en" class="guide" data-language="en" hidden lang="en" aria-labelledby="en-title">
 <h2 id="en-title">User guide</h2>
 <p>This unofficial project is for learning and connection experiments. Game code, images and audio still come from the official page. It is not a full mirror and cannot make an inaccessible official page load.</p>
 <h3>Installation</h3>
@@ -37,5 +103,11 @@
 <p>This project is for learning, research and connection testing only. Stability, availability, speed and continued service are not guaranteed. Exhausted free quotas, platform restrictions, maintenance or upstream failures may cause throttling, interruption or termination. The maintainer does not commit to buying extra quota, a restoration deadline or compensation, and accepts no responsibility for resulting disruption or losses. Assess the risks before use.</p>
 <p>Only use a relay you operate or trust. This installation page does not request credentials and the code does not log login or chat content, but mode C carries login and game data through the relay. Self-hosting operators are responsible for their own platform quotas and charges.</p>
 </section>
-<footer><a href="/monitor/">負載監看 / Load monitor</a><a href="/api/relay-status">中繼狀態 / Relay status</a><a href="https://github.com/awdrrawd/BondageClub-Relay">GitHub</a></footer>
-</main></body></html>
+
+    </div></details>
+  </section>
+  <footer class="site-footer"><span><b>BC Relay</b><span class="footer-divider">/</span><span data-i18n="footerNote">非官方專案 · 學習與連線實驗</span></span><div><a href="/api/relay-status" data-i18n="serviceInfo">服務資訊</a><a href="https://github.com/awdrrawd/BondageClub-Relay"><span data-i18n="sourceLink">查看原始碼</span> ↗</a></div></footer>
+</main>
+<script src="/game-links.js" type="module"></script>
+</body>
+</html>
