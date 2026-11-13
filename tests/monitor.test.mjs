@@ -31,6 +31,23 @@ test('upstream errors do not leak credentials and failures are also cached',asyn
  const res=await monitor(request(),env,'Lite');const text=await res.text();assert.ok(!text.includes('private'));assert.equal(JSON.parse(text).state,'unavailable');
  await monitor(request(),env,'Lite');assert.equal(calls,1);
 });
+
+test('monitor invalidates cached results when configuration or project label changes',async()=>{
+ const queries=[];
+ const monitor=createMonitor({clock:()=>date,fetcher:async(url,init)=>{
+  queries.push(JSON.parse(init.body));
+  return Response.json({data:{viewer:{accounts:[account]}}});
+ }});
+ await monitor(request(),env,'Relay');
+ assert.equal((await (await monitor(request(),env,'Other')).json()).project,'Other');
+ const changed={...env,MONITOR_SCRIPT_NAME:'other-script',MONITOR_DATASET:'workersInvocationsAdaptive'};
+ await monitor(request(),changed,'Other');
+ await monitor(request(),changed,'Other');
+ assert.equal(queries.length,3);
+ assert.equal(queries[2].variables.script,'other-script');
+ assert.ok(queries[2].query.includes('$account: string'));
+ assert.ok(!queries[2].query.includes('pagesFunctionsInvocationsAdaptiveGroups'));
+});
 test('missing metrics remain unknown and truncated results cannot look complete',()=>{
  assert.equal(summarize({total:[],today:[],hours:[]},date,'Lite').state,'no_data');
  assert.equal(summarize({total:[],today:[],hours:[]},date,'Lite').requests,null);

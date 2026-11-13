@@ -67,7 +67,12 @@ test('poll fallback and late runtime both avoid leaving UI after login',()=>{
   const h=harness();vm.runInContext(code,h.ctx);vm.runInContext(runtime,h.ctx);
   h.events.get('pagehide')();assert.equal(h.intervals.size,0);
   h.events.get('pageshow')();assert.equal(h.intervals.size,1);
-  h.window.Player={MemberNumber:12};h.intervals.values().next().value();
+  h.document.hidden=true;h.events.get('doc:visibilitychange')();assert.equal(h.intervals.size,0);
+  h.events.get('pageshow')();assert.equal(h.intervals.size,0);
+  h.document.hidden=false;h.events.get('doc:visibilitychange')();assert.equal(h.intervals.size,1);
+  h.document.hidden=true;h.events.get('doc:visibilitychange')();
+  h.window.Player={MemberNumber:12};
+  h.document.hidden=false;h.events.get('doc:visibilitychange')();
   assert.ok(h.document.body.children[0].removed);assert.equal(h.intervals.size,0);
   const late=harness();vm.runInContext(code,late.ctx);late.window.__BCRelayLoader.finishLogin();vm.runInContext(runtime,late.ctx);
   assert.equal(late.document.body.children.length,0);assert.equal(late.intervals.size,0);
