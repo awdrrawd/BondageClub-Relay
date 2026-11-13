@@ -26,7 +26,11 @@
     response_shape: ['統計回應結構不符', 'Unexpected metrics structure'],
     network: ['查詢連線失敗或逾時', 'Query connection failed or timed out'],
   };
-  const format=value=>typeof value==='number'&&Number.isFinite(value)?new Intl.NumberFormat(zh?'zh-TW':'en',{maximumFractionDigits:2}).format(value):'—';
+  const numberFormats = {
+    zh: new Intl.NumberFormat('zh-TW', {maximumFractionDigits:2}),
+    en: new Intl.NumberFormat('en', {maximumFractionDigits:2}),
+  };
+  const format=value=>typeof value==='number'&&Number.isFinite(value)?numberFormats[zh?'zh':'en'].format(value):'—';
   const views={overview:[0,1,4,5],history:[2,3],errors:[4,5],performance:[6,7]};
   const tabs=Array.from(document.querySelectorAll('[data-view]'));
   function selectView(next){view=next;render();}
@@ -138,7 +142,7 @@
         node('line',{x1:left,x2:left+plotWidth,y1:y,y2:y,class:'grid-line'});
         node('text',{x:left-10,y:y+4,'text-anchor':'end',class:'axis-label'},format(i*tickStep));
       }
-      const sorted=[...hours].sort((a,b)=>Date.parse(a.hour)-Date.parse(b.hour));
+      const sorted=[...hours].reverse();
       const start=Date.parse(sorted[0].hour),end=Date.parse(sorted.at(-1).hour)+3600000,span=end-start;
       const width=plotWidth*3600000/span;
       sorted.forEach(h=>{

@@ -113,8 +113,6 @@ function updateSummary() {
   if (directory.mode !== 'official' && manualVersion) status.textContent += ' · ' + t('manualSource');
 }
 function render() {
-  controller?.abort();
-  run++;
   const live = directory.mode === 'official';
   const entries = (!live && manualVersion ? [] : directory.links).map(link => ({...link, origin:live ? 'originOfficial' : 'originFallback'}));
   const presets = !entries.length ? fallbackEntries.map(entry => ({...entry, origin:'originFallback'})) : [];
@@ -145,12 +143,10 @@ function render() {
     details.append(detailsLabel, redirect, time, start);
     node.append(heading, name, origin, host, statuses, link, details);
     const card = {entry,node,badge,originLabel,version,host,serverLabel,localLabel,server,local,link,detailsLabel,redirect,time,start,serverData:{state:'idle'},localState:'idle'};
-    updateCard(card);
     return card;
   });
   list.replaceChildren(...cards.map(card => card.node));
   list.setAttribute('aria-busy', 'false');
-  updateSummary();
   void checkAll();
 }
 

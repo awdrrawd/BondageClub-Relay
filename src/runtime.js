@@ -69,7 +69,9 @@
   };
   function pause() { window.clearInterval(timer); timer = undefined; }
   function resume() {
-    if (!disposed && !checkLogin() && timer === undefined) timer = window.setInterval(() => refresh(), 500);
+    if (disposed || document.hidden) return;
+    refresh();
+    if (!disposed && timer === undefined) timer = window.setInterval(() => refresh(), 500);
   }
   function mount() {
     if (disposed || checkLogin()) return;
@@ -180,6 +182,7 @@
     if (!disposed) {
       listen(window, 'pagehide', pause);
       listen(window, 'pageshow', resume);
+      listen(document, 'visibilitychange', () => document.hidden ? pause() : resume());
       resume();
     }
   }

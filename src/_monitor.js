@@ -1,4 +1,4 @@
-// Public aggregates only. Keep this file identical in Lite and Relay.
+// Public aggregates only; never expose raw analytics responses.
 const TTL = 300000;
 const QUERY = `query Load($account: string, $script: string, $start: string, $today: string, $end: string) {
   viewer { accounts(filter: {accountTag: $account}) {
@@ -68,10 +68,7 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
     if (!/^[a-f0-9]{32}$/i.test(account || '') || !token || !script || script.length > 256) return response({state:'not_configured',project:label});
     const dataset=env.MONITOR_DATASET || 'pagesFunctionsInvocationsAdaptiveGroups';
     if (!['pagesFunctionsInvocationsAdaptiveGroups','workersInvocationsAdaptive'].includes(dataset)) return response({state:'not_configured',project:label});
-    // Pages uses GraphQL String; Workers analytics uses the custom string scalar.
-    const query = QUERY.replaceAll('workersInvocationsAdaptive',dataset)
-      .replaceAll(': string', dataset === 'pagesFunctionsInvocationsAdaptiveGroups' ? ': String' : ': string');
-    const key = JSON.stringify([account,token,script,dataset,query]);
+    const key = JSON.stringify([account,token,script,dataset,label]);
     if (key !== configKey) { memo=undefined; pending=undefined; configKey=key; }
     const now=clock();
     if (memo && memo.expires > now) return response(memo.data);
@@ -89,6 +86,9 @@ export function createMonitor({fetcher=(...args)=>fetch(...args), clock=()=>Date
           if (expires>clock()) return {data,expires};
         }
       } catch { /* Cache is an optimization, not an availability requirement. */ }
+      // Pages uses GraphQL String; Workers analytics uses the custom string scalar.
+      const query = QUERY.replaceAll('workersInvocationsAdaptive',dataset)
+        .replaceAll(': string', dataset === 'pagesFunctionsInvocationsAdaptiveGroups' ? ': String' : ': string');
       const historyRequest = historyQuery(dataset,now);
       const historyPromise = (async()=>{
         try {

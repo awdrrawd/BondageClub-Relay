@@ -6,6 +6,8 @@ import {readFile} from 'node:fs/promises';
 const code=await readFile(new URL('../src/monitor/monitor.js',import.meta.url),'utf8');
 const html=await readFile(new URL('../src/monitor/index.html',import.meta.url),'utf8');
 async function render(data){
+  let formatterCount=0;
+  const intl={NumberFormat:class extends Intl.NumberFormat {constructor(...args){super(...args);formatterCount++;}}};
   function element(tagName){
     return {tagName,children:[],dataset:{},attrs:{},events:{},textContent:'',classList:{toggle(){}},
       append(...children){this.children.push(...children)},replaceChildren(...children){this.children=children},
@@ -17,9 +19,9 @@ async function render(data){
   const walk=el=>[el,...el.children.flatMap(walk)];
   const document={hidden:false,documentElement:{},getElementById:id=>ids[id],createElement:element,createElementNS:(_,tag)=>element(tag),addEventListener(){},
     querySelectorAll:selector=>selector==='[data-view]'?tabs:Object.values(ids).flatMap(walk).filter(el=>el.dataset.hour)};
-  vm.runInNewContext(code,{document,navigator:{language:'zh-TW'},Intl,Date,AbortSignal,setTimeout(){},setInterval(){},fetch:async()=>({ok:true,json:async()=>data})});
+  vm.runInNewContext(code,{document,navigator:{language:'zh-TW'},Intl:intl,Date,AbortSignal,setTimeout(){},setInterval(){},fetch:async()=>({ok:true,json:async()=>data})});
   await new Promise(resolve=>setImmediate(resolve));
-  return {ids,tabs,walk};
+  return {ids,tabs,walk,formatterCount:()=>formatterCount};
 }
 const hours=[{hour:'2026-09-15T10:00:00Z',requests:20,errors:5},{hour:'2026-09-15T12:00:00Z',requests:0,errors:0},{hour:'2026-09-15T11:00:00Z',requests:10,errors:null}];
 const data={state:'ready',requests:30,errors:5,hours,from:'2026-09-14T12:30:00Z',to:'2026-09-15T12:30:00Z'};
@@ -43,11 +45,13 @@ test('hourly rows are newest first; bar click and keyboard show exact metrics, i
 });
 
 test('selection survives language and view changes; unavailable data leaves no stale details',async()=>{
-  const {ids,tabs,walk}=await render(data);
+  const {ids,tabs,walk,formatterCount}=await render(data);
+  assert.equal(formatterCount(),2);
   walk(ids.chart).find(el=>el.attrs.role==='button').events.click();
   ids.language.events.click();
   assert.match(ids['hour-detail'].children[1].textContent,/Requests: 20/);
   tabs[2].events.click();
+  assert.equal(formatterCount(),2);
   assert.match(ids.chartTitle.textContent,/Invocation errors/);
   assert.match(ids['hour-detail'].children[1].textContent,/Requests: 20/);
   for(const state of ['unavailable','no_data','disabled']){
