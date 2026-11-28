@@ -17,7 +17,7 @@ Workers & Pages → 建立 Pages → 連接 GitHub → BondageClub-Relay。
 | Build command | `npm test && npm run build:relay` |
 | Output directory | `dist-relay` |
 | Root directory | 留空 |
-| NODE_VERSION | 22 |
+| NODE_VERSION | 24 |
 
 npm run build 與 npm run build:relay 都產生 dist-relay。插件依官方頁面原本要連的伺服器，分流到固定的 prod/test 上游，不更改官方 GameVersion。
 
@@ -101,7 +101,7 @@ Origin 限制不是對非瀏覽器程式的認證，任何公開中繼仍可能�
 
 遠端面板載入失敗時，Console 會提示；已儲存模式的連線核心不依賴面板下載。若官方 CSP 禁止載入本站 script／style，需另行確認相容性。
 
-GitHub Actions 在 main 推送、PR 與手動觸發時執行測試和建置。Dependabot 每月檢查 GitHub Actions 並開 PR，不自動合併。本倉庫目前沒有 npm 第三方依賴，因此未增加空的 npm 更新排程。
+GitHub Actions 在 main 推送、PR 與手動觸發時執行測試和建置。Dependabot 每週六台北時間 08:11 檢查 npm（`miniflare` 等開發依賴）與 GitHub Actions 並開 PR，不自動合併；新版本發布滿 7 天才提出（安全性更新不受影響）。
 
 推送後在 GitHub → Actions 確認 CI 成功；若要強制合併前通過測試，可在 Settings → Rules → Rulesets 為 main 加入必要狀態檢查 `verify`（需先有一次執行紀錄）。Cloudflare 維持原組建設定。
 
