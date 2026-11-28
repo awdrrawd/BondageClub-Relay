@@ -43,7 +43,7 @@ npm ci
 npm run check
 ```
 
-Cloudflare：組建 `npm test && npm run build:relay`，輸出 `dist-relay`，NODE_VERSION 為 22。`build` 與 `build:relay` 使用同一流程。
+Cloudflare：組建 `npm test && npm run build:relay`，輸出 `dist-relay`，NODE_VERSION 為 24。`build` 與 `build:relay` 使用同一流程。
 
 - [部署、安裝與排錯](docs/connection-test.md)
 - [架構與遊戲更新維護](docs/architecture.md)

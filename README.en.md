@@ -43,7 +43,7 @@ npm ci
 npm run check
 ```
 
-Cloudflare build: `npm test && npm run build:relay`; output: `dist-relay`; NODE_VERSION: 22. Both build scripts use the same builder.
+Cloudflare build: `npm test && npm run build:relay`; output: `dist-relay`; NODE_VERSION: 24. Both build scripts use the same builder.
 
 - [Deployment and troubleshooting (Chinese)](docs/connection-test.md)
 - [Architecture and game updates (Chinese)](docs/architecture.md)
